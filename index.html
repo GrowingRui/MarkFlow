@@ -12,12 +12,12 @@
 
   <!-- Header -->
   <header class="z-20 mx-auto flex max-w-[1160px] items-center justify-between px-5 py-5 lg:px-8">
-    <a href="#" class="link -m-1 p-1" aria-label="MarkFlow home">
+    <a href="/" class="link -m-1 p-1" aria-label="MarkFlow home">
       <img src="assets/markflow-logo.png" alt="MarkFlow" class="h-7 w-auto mix-blend-multiply sm:h-8" />
     </a>
     <nav class="flex items-center gap-2 sm:gap-4" aria-label="Main">
-      <a href="#" class="link hidden px-2 text-[15px] font-medium sm:inline">Pricing</a>
-      <div class="relative" id="langPicker">
+      <a href="#faq-account" class="link hidden px-2 text-[15px] font-medium sm:inline">Pricing</a>
+      <div class="relative hidden" id="langPicker">
         <button type="button" id="langBtn" class="lang-btn btn flex items-center gap-1.5 rounded-full py-2 pl-3 pr-2.5 text-[14px] font-semibold text-slate2" aria-haspopup="listbox" aria-expanded="false" aria-controls="langMenu" aria-label="Language: English">
           <svg class="h-4 w-4 text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.8 3.5 5.8 3.5 9s-1 6.2-3.5 9c-2.5-2.8-3.5-5.8-3.5-9s1-6.2 3.5-9Z"/></svg>
           <span id="langCode">EN</span>
@@ -48,7 +48,7 @@
 
   <main>
     <!-- Hero: a stack of paper, the converter on top -->
-    <section class="mx-auto max-w-[1160px] px-5 pb-20 pt-8 lg:px-8 lg:pb-28 lg:pt-14">
+    <section class="mx-auto max-w-[1160px] px-5 pb-20 pt-8 lg:px-8 lg:pb-28 lg:pt-14" id="convert">
       <div class="relative">
         <div class="back paper-1 bg-paper" style="--x:-14px;--y:18px;--r:-2.2deg" aria-hidden="true"></div>
         <div class="back paper-1 bg-[#FBFBFC]" style="--x:12px;--y:10px;--r:1.4deg" aria-hidden="true"></div>
@@ -248,30 +248,30 @@ new contracts in the EU region.
     </section>
 
     <!-- Guides -->
-    <section class="mx-auto max-w-[1160px] px-5 py-14 lg:px-8 lg:py-20">
+    <section class="mx-auto max-w-[1160px] px-5 py-14 lg:px-8 lg:py-20" id="guides">
       <h2 class="text-[32px] font-bold leading-[1.1] tracking-[-0.03em] sm:text-[44px]">Guides</h2>
       <div class="mt-12 grid gap-8 md:grid-cols-3">
-        <a href="#" class="guide tilt paper-1 block" style="transform: rotate(-1deg)">
+        <article class="tilt paper-1" style="transform: rotate(-1deg)">
           <div class="guide-body fold fold-sm flex h-full flex-col rounded-[3px] bg-white p-6 pt-8">
             <h3 class="text-[18px] font-semibold leading-[1.35] tracking-[-0.01em]">Batch convert PDFs to Markdown</h3>
             <p class="mt-3 text-[15px] text-slate2/70">Convert several PDFs at once, check tables and OCR output, and keep the .md files organized.</p>
-            <span class="mt-auto inline-flex items-center gap-1.5 pt-8 text-[14px] font-semibold text-teal">Read the guide <svg class="chev h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
+            <p class="mt-auto pt-8 text-[14px] font-medium text-muted">Coming soon</p>
           </div>
-        </a>
-        <a href="#" class="guide tilt paper-1 block" style="transform: rotate(0.8deg)">
+        </article>
+        <article class="tilt paper-1" style="transform: rotate(0.8deg)">
           <div class="guide-body fold fold-sm flex h-full flex-col rounded-[3px] bg-white p-6 pt-8">
             <h3 class="text-[18px] font-semibold leading-[1.35] tracking-[-0.01em]">Keep a PDF's structure when you prepare it for AI</h3>
             <p class="mt-3 text-[15px] text-slate2/70">A workflow for RAG systems and assistants that keeps headings and tables intact.</p>
-            <span class="mt-auto inline-flex items-center gap-1.5 pt-8 text-[14px] font-semibold text-teal">Read the guide <svg class="chev h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
+            <p class="mt-auto pt-8 text-[14px] font-medium text-muted">Coming soon</p>
           </div>
-        </a>
-        <a href="#" class="guide tilt paper-1 block" style="transform: rotate(-0.6deg)">
+        </article>
+        <article class="tilt paper-1" style="transform: rotate(-0.6deg)">
           <div class="guide-body fold fold-sm flex h-full flex-col rounded-[3px] bg-white p-6 pt-8">
             <h3 class="text-[18px] font-semibold leading-[1.35] tracking-[-0.01em]">Build a knowledge base from Word, PDF and web pages</h3>
             <p class="mt-3 text-[15px] text-slate2/70">Turn mixed sources into one Markdown knowledge base for assistants and team wikis.</p>
-            <span class="mt-auto inline-flex items-center gap-1.5 pt-8 text-[14px] font-semibold text-teal">Read the guide <svg class="chev h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
+            <p class="mt-auto pt-8 text-[14px] font-medium text-muted">Coming soon</p>
           </div>
-        </a>
+        </article>
       </div>
     </section>
 
@@ -321,17 +321,14 @@ new contracts in the EU region.
           <img src="assets/markflow-logo-reverse.png" alt="MarkFlow" class="h-8 w-auto" />
           <p class="mt-4 max-w-[18em] text-[14px]">Paper in, Markdown out. Runs in your browser.</p>
         </div>
-        <div><h3 class="text-[14px] font-semibold text-white">Converters</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#" class="link">PDF to Markdown</a></li><li><a href="#" class="link">Word to Markdown</a></li><li><a href="#" class="link">PowerPoint to Markdown</a></li><li><a href="#" class="link">EPUB to Markdown</a></li></ul></div>
-        <div><h3 class="text-[14px] font-semibold text-white">More tools</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#" class="link">Excel to Markdown</a></li><li><a href="#" class="link">HTML to Markdown</a></li><li><a href="#" class="link">CSV to Markdown</a></li><li><a href="#" class="link">PDF to text</a></li></ul></div>
-        <div><h3 class="text-[14px] font-semibold text-white">OCR</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#" class="link">Image to text</a></li><li><a href="#" class="link">PDF OCR</a></li></ul></div>
-        <div><h3 class="text-[14px] font-semibold text-white">Resources</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#" class="link">GitHub</a></li><li><a href="#" class="link">Markdown viewer</a></li><li><a href="#" class="link">Guides</a></li></ul></div>
-        <div><h3 class="text-[14px] font-semibold text-white">Legal</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#" class="link">Privacy</a></li><li><a href="#" class="link">Terms</a></li><li><a href="#" class="link">Cookies</a></li></ul></div>
+        <div><h3 class="text-[14px] font-semibold text-white">Converters</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#convert" class="link">PDF to Markdown</a></li><li><a href="#convert" class="link">Word to Markdown</a></li><li><a href="#convert" class="link">PowerPoint to Markdown</a></li><li><a href="#convert" class="link">EPUB to Markdown</a></li></ul></div>
+        <div><h3 class="text-[14px] font-semibold text-white">More tools</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#convert" class="link">Excel to Markdown</a></li><li><a href="#convert" class="link">HTML to Markdown</a></li><li><a href="#convert" class="link">CSV to Markdown</a></li><li><a href="#convert" class="link">PDF to text</a></li></ul></div>
+        <div><h3 class="text-[14px] font-semibold text-white">OCR</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#convert" class="link">Image to text</a></li><li><a href="#convert" class="link">PDF OCR</a></li></ul></div>
+        <div><h3 class="text-[14px] font-semibold text-white">Resources</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="https://github.com/GrowingRui/MarkFlow" class="link">GitHub</a></li><li><a href="#guides" class="link">Guides</a></li></ul></div>
+        <div><h3 class="text-[14px] font-semibold text-white">Legal</h3><ul class="mt-4 space-y-2 text-[14px]"><li class="text-white/40">Privacy</li><li class="text-white/40">Terms</li><li class="text-white/40">Cookies</li></ul><p class="mt-3 text-[13px] text-white/40">Coming soon</p></div>
       </div>
       <div class="mt-14 flex flex-col gap-4 border-t border-white/10 pt-6 text-[13px] sm:flex-row sm:items-center sm:justify-between">
         <p>© 2026 MarkFlow</p>
-        <div class="flex flex-wrap gap-x-4 gap-y-1">
-          <a href="#" class="link">English</a><a href="#" class="link">Deutsch</a>
-        </div>
       </div>
     </div>
   </footer>

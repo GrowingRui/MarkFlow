@@ -7,13 +7,14 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import './styles.css';
 import { initLanguagePicker } from './ui/language-picker.js';
-import { renderFaq } from './ui/faq.js';
+import { initFaqLinks, renderFaq } from './ui/faq.js';
 import { initConverter } from './ui/converter.js';
 import { initResult } from './ui/result.js';
 import { initAccount } from './ui/account.js';
 
 initLanguagePicker();
 renderFaq();
+initFaqLinks();
 initConverter();
 initResult();
 initAccount();

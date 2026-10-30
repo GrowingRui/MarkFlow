@@ -10,17 +10,30 @@ const FAQS = [
   ['Why should I convert Office documents to Markdown?', 'Markdown is portable, easy to version in Git, and readable by both people and AI tools, unlike app-specific formats.'],
   ['Can I batch convert multiple files?', 'Yes. Drop several files at once, or a ZIP file. They convert one after another in your browser, and you can download all the Markdown files together as a ZIP. Each file counts as one of your daily conversions.'],
   ['Which Markdown flavor does MarkFlow output?', 'MarkFlow outputs GitHub-flavored Markdown, which works in most editors, documentation tools, and Git hosts.'],
-  ['Do I need an account to use MarkFlow?', 'No. You can convert 3 files a day without an account. A free account raises that to 30 a day, and your files still never leave your browser.'],
+  ['Do I need an account to use MarkFlow?', 'No. You can convert 3 files a day without an account. A free account raises that to 30 a day, and your files still never leave your browser.', 'faq-account'],
   ['What should I do after converting a file?', 'Review the preview, download the .md file, and add it to your docs, repository, knowledge base, or AI workflow.'],
 ];
 
 export function renderFaq() {
-  document.getElementById('faq').innerHTML = FAQS.map(([q, a]) => `
-    <details class="border-b border-rule">
+  document.getElementById('faq').innerHTML = FAQS.map(([q, a, id]) => `
+    <details class="border-b border-rule scroll-mt-8"${id ? ` id="${id}"` : ''}>
       <summary class="faq-q flex cursor-pointer items-center justify-between gap-6 py-5 text-[16px] font-semibold">
         <span>${q}</span>
         <svg class="plus h-4 w-4 shrink-0 text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </summary>
       <p class="max-w-[38em] pb-6 pr-8 text-[15px] text-slate2/70">${a}</p>
     </details>`).join('');
+}
+
+// Opens a question when a link points at it, such as Pricing in the header.
+export function initFaqLinks() {
+  const open = hash => {
+    const target = hash.length > 1 && document.getElementById(hash.slice(1));
+    if (target?.tagName === 'DETAILS') target.open = true;
+  };
+  document.addEventListener('click', e => {
+    const link = e.target.closest('a[href^="#"]');
+    if (link) open(link.getAttribute('href'));
+  });
+  open(location.hash);
 }

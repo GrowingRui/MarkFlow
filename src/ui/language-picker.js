@@ -1,5 +1,5 @@
 // Header language menu. A listbox: arrow keys move, Enter or Space picks, Escape closes.
-// It only changes the label for now; the page itself isn't translated yet.
+// Hidden in index.html until the page is translated; remove `hidden` from #langPicker to bring it back.
 export function initLanguagePicker() {
   const btn = document.getElementById('langBtn');
   const menu = document.getElementById('langMenu');
