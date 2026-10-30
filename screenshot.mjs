@@ -1,12 +1,8 @@
 // Usage: node screenshot.mjs <url> [label] [width]
-import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import puppeteer from 'puppeteer-core';
 
-const require = createRequire(import.meta.url);
-const PPTR = process.env.PUPPETEER_PATH ||
-  'C:/Users/ASUS/AppData/Local/Temp/claude/c--Users-ASUS-Downloads-MarkFlow/6cd872e9-7dea-426b-9c0a-907a54702135/scratchpad/pptr/node_modules/puppeteer-core';
-const puppeteer = require(PPTR);
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 
 const [url = 'http://localhost:3000', label, width = '1440'] = process.argv.slice(2);
 const dir = './temporary screenshots';

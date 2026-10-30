@@ -1,0 +1,5 @@
+| Name | Role | Notes |
+| --- | --- | --- |
+| Ada | Engineer | Likes "tea", not coffee |
+| Grace | Admiral |  |
+| Linus | Maintainer | Pipe \| inside |

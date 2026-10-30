@@ -1,0 +1,4 @@
+# Fixtures are test inputs: keep them byte-for-byte.
+tests/fixtures/** -text
+# Snapshots are compared to converter output, which uses LF.
+tests/__snapshots__/** text eol=lf
