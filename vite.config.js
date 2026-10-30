@@ -1,11 +1,13 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import { api } from './server/vite-plugin.js';
 
 export default defineConfig({
   server: { port: 3000, strictPort: true },
   preview: { port: 3000, strictPort: true },
   plugins: [
+    api(),
     // Text recognition files, served from our own site instead of a CDN.
     // createWorker('eng') uses the LSTM engine, so only the LSTM builds of the core are needed.
     viteStaticCopy({
@@ -20,5 +22,6 @@ export default defineConfig({
     environment: 'happy-dom',
     include: ['tests/**/*.test.js'],
     setupFiles: ['tests/setup.js'],
+    env: { PGLITE_DIR: 'memory://' },
   },
 });

@@ -1,6 +1,7 @@
 // The hero converter: pick or fetch a file, convert it, and hand the Markdown to the result panel.
 import { convertFile, extOf, fail, isSupported } from '../convert/index.js';
 import { showResult } from './result.js';
+import { countConversion, limitMessage } from './account.js';
 
 // Used to name a file fetched from a URL that has no recognisable extension.
 const MIME_EXT = { 'application/pdf': 'pdf', 'text/html': 'html', 'application/json': 'json', 'text/csv': 'csv', 'application/xml': 'xml', 'text/xml': 'xml', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
@@ -64,6 +65,8 @@ export function initConverter() {
   // Conversion
   convertBtn.addEventListener('click', async () => {
     if (!current || busy) return;
+    const limited = limitMessage();
+    if (limited) { status(limited); return; }
     busy = true;
     convertBtn.disabled = true;
     convertBtn.firstElementChild.textContent = 'Converting…';
@@ -73,6 +76,7 @@ export function initConverter() {
       const md = await convertFile(current, ctx);
       if (!md.trim()) throw fail('No readable text was found in this file.');
       showResult(md, current.name);
+      countConversion();
       status(warnings.length ? warnings.join(' ') : '');
     } catch (err) {
       console.error(err);

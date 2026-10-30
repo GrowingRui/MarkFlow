@@ -114,6 +114,13 @@ body > * { position: relative; z-index: 1; }
 .lang-check { visibility: hidden; }
 .lang-opt[aria-selected="true"] .lang-check { visibility: visible; }
 
+/* Sign-in dialog: a sheet laid on the desk */
+.auth-dialog { margin: auto; }
+.auth-dialog[open] { animation: reveal 520ms var(--spring) both; }
+.auth-dialog::backdrop { background: rgba(18, 43, 64, 0.32); }
+.auth-dialog[open]::backdrop { animation: fade 200ms ease both; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
 details summary { list-style: none; }
 details summary::-webkit-details-marker { display: none; }
 details .plus { transition: transform 260ms var(--spring); }

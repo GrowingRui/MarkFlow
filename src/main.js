@@ -10,8 +10,10 @@ import { initLanguagePicker } from './ui/language-picker.js';
 import { renderFaq } from './ui/faq.js';
 import { initConverter } from './ui/converter.js';
 import { initResult } from './ui/result.js';
+import { initAccount } from './ui/account.js';
 
 initLanguagePicker();
 renderFaq();
 initConverter();
 initResult();
+initAccount();
