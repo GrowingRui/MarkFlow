@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MarkFlow: turn any file into clean Markdown</title>
+  <title>MarkFlow: turn your files into clean Markdown</title>
   <meta name="description" content="Convert PDF, Word, PowerPoint, Excel and more into clean, structured Markdown, right in your browser. Files never leave your device." />
   <link rel="icon" type="image/png" href="assets/markflow-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,7 +21,7 @@
             sky: '#0EA5E9',
             muted: '#64748B',
             paper: '#F4EFE6',
-            base: '#F9F9FB',
+            desk: '#E8ECF0',
             amber: '#F59E0B',
             rule: '#E3E6EC',
           },
@@ -36,77 +36,115 @@
   <style>
     :root {
       --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
-      --elev-1: 0 1px 2px rgba(18, 43, 64, 0.04), 0 2px 8px -2px rgba(18, 43, 64, 0.06);
-      --elev-2: 0 1px 2px rgba(18, 43, 64, 0.05), 0 8px 24px -8px rgba(18, 43, 64, 0.12), 0 24px 56px -24px rgba(14, 116, 144, 0.18);
-      --elev-3: 0 2px 4px rgba(18, 43, 64, 0.06), 0 16px 40px -12px rgba(18, 43, 64, 0.18), 0 40px 80px -32px rgba(14, 116, 144, 0.25);
+      --fold: 44px;
     }
     html { scroll-behavior: smooth; }
     body {
       font-family: 'Inter', system-ui, sans-serif;
-      background: #F9F9FB;
       color: #122B40;
       line-height: 1.7;
       -webkit-font-smoothing: antialiased;
-    }
-    .elev-1 { box-shadow: var(--elev-1); }
-    .elev-2 { box-shadow: var(--elev-2); }
-    .elev-3 { box-shadow: var(--elev-3); }
-
-    /* Headings carry their Markdown marker, hanging in the margin on wide screens */
-    .md-h { position: relative; letter-spacing: -0.03em; }
-    .md-h .mk { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 500; color: #0E7490; letter-spacing: 0; margin-right: 0.35em; }
-    @media (min-width: 1280px) {
-      .md-h .mk { position: absolute; right: 100%; margin-right: 0.45em; }
-    }
-
-    /* Hero atmosphere */
-    .hero-bg {
       background:
-        radial-gradient(60% 70% at 85% 20%, rgba(14, 165, 233, 0.10), transparent 70%),
-        radial-gradient(50% 60% at 70% 90%, rgba(14, 116, 144, 0.10), transparent 70%),
-        radial-gradient(40% 50% at 0% 0%, rgba(244, 239, 230, 0.9), transparent 70%);
+        radial-gradient(55% 40% at 80% 0%, rgba(14, 165, 233, 0.10), transparent 70%),
+        radial-gradient(45% 35% at 0% 30%, rgba(244, 239, 230, 0.9), transparent 70%),
+        radial-gradient(60% 40% at 100% 70%, rgba(14, 116, 144, 0.07), transparent 70%),
+        #E8ECF0;
     }
-    .grain::after {
-      content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.35; mix-blend-mode: multiply;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.07 0 0 0 0 0.17 0 0 0 0 0.25 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.5; mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.07 0 0 0 0 0.17 0 0 0 0 0.25 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     }
+    body > * { position: relative; z-index: 1; }
+
+    /* Paper: layered, navy-tinted shadows. drop-shadow follows the folded-corner outline. */
+    .paper-1 { filter: drop-shadow(0 1px 1px rgba(18, 43, 64, 0.06)) drop-shadow(0 6px 12px rgba(18, 43, 64, 0.07)); }
+    .paper-2 { filter: drop-shadow(0 1px 1px rgba(18, 43, 64, 0.07)) drop-shadow(0 14px 28px rgba(18, 43, 64, 0.10)) drop-shadow(0 32px 48px rgba(14, 116, 144, 0.08)); }
+
+    /* Folded top-right corner, from the logo's document */
+    .fold { position: relative; clip-path: polygon(0 0, calc(100% - var(--fold)) 0, 100% var(--fold), 100% 100%, 0 100%); }
+    .fold::after {
+      content: ''; position: absolute; top: 0; right: 0; width: var(--fold); height: var(--fold);
+      background: linear-gradient(to top right, #D5DDE5 0%, #EEF2F5 48%, transparent 50%);
+      border-bottom-left-radius: 6px;
+    }
+    .fold-sm { --fold: 26px; }
+
+    /* Hero stack: back sheets fan out once on load */
+    .back { position: absolute; inset: 0; border-radius: 4px; transform: translate(var(--x), var(--y)) rotate(var(--r)); animation: fan 900ms var(--spring) 200ms both; }
+    @keyframes fan { from { transform: none; opacity: 0; } to { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 1; } }
+    .tape { background: rgba(245, 158, 11, 0.55); transform: rotate(-4deg); mix-blend-mode: multiply; }
+
+    /* Ruled paper */
+    .index-card { background: #fff linear-gradient(transparent 63px, rgba(14, 116, 144, 0.55) 63px, rgba(14, 116, 144, 0.55) 65px, transparent 65px) no-repeat; }
+    .index-card .lines { background: repeating-linear-gradient(transparent 0 27px, rgba(14, 165, 233, 0.16) 27px 28px); }
+    .notebook {
+      background:
+        linear-gradient(90deg, transparent 63px, rgba(245, 158, 11, 0.6) 63px, rgba(245, 158, 11, 0.6) 65px, transparent 65px),
+        repeating-linear-gradient(transparent 0 31px, rgba(14, 165, 233, 0.18) 31px 32px),
+        #fff;
+    }
+
+    /* Folder tabs */
+    .folder { position: relative; background: #F4EFE6; border-radius: 0 10px 10px 10px; }
+    .folder::before { content: ''; position: absolute; left: 0; bottom: 100%; width: 46%; height: 14px; background: inherit; border-radius: 8px 8px 0 0; }
 
     /* Buttons: teal pill primary, navy on hover (brand guide) */
-    .btn { outline: none; transition: transform 220ms var(--spring), background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease; }
+    .btn { outline: none; transition: transform 220ms var(--spring), background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, opacity 160ms ease; }
     .btn:active { transform: scale(0.97); }
-    .btn:focus-visible { box-shadow: 0 0 0 2px #F9F9FB, 0 0 0 4px #0EA5E9; }
-    .btn-primary { background: #0E7490; color: #fff; }
+    .btn:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #0EA5E9; }
+    .btn-primary { background: #0E7490; color: #fff; box-shadow: 0 1px 0 rgba(18, 43, 64, 0.2), 0 6px 14px -6px rgba(14, 116, 144, 0.6); }
     .btn-primary:hover { background: #122B40; }
-    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
     .btn-primary:disabled:hover { background: #0E7490; }
     .btn-primary .chev { transition: transform 220ms var(--spring); }
     .btn-primary:not(:disabled):hover .chev { transform: translateX(3px); }
-    .btn-ghost { border: 1.5px solid #122B40; color: #122B40; background: transparent; }
+    .btn-ghost { box-shadow: inset 0 0 0 1.5px #122B40; color: #122B40; background: transparent; }
     .btn-ghost:hover { background: #122B40; color: #fff; }
-    .link { outline: none; border-radius: 3px; text-decoration-color: rgba(14, 116, 144, 0.35); text-underline-offset: 4px; transition: color 160ms ease, opacity 160ms ease; }
+    .btn-ghost:focus-visible { box-shadow: inset 0 0 0 1.5px #122B40, 0 0 0 2px #fff, 0 0 0 4px #0EA5E9; }
+    .link { outline: none; border-radius: 3px; text-underline-offset: 4px; transition: color 160ms ease, opacity 160ms ease; }
     .link:hover { color: #0E7490; text-decoration-line: underline; }
     .link:focus-visible { box-shadow: 0 0 0 2px #0EA5E9; }
     .link:active { opacity: 0.7; }
     .footer .link:hover { color: #fff; }
 
-    .field { transition: border-color 160ms ease, box-shadow 160ms ease; }
+    .field { transition: box-shadow 160ms ease, border-color 160ms ease; }
     .field:hover { border-color: #94A3B8; }
     .field:focus, .field:focus-visible { outline: none; border-color: #0E7490; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18); }
 
-    .dropzone { transition: border-color 160ms ease, background-color 160ms ease, transform 260ms var(--spring); outline: none; }
-    .dropzone:hover, .dropzone.drag { border-color: #0E7490; background-color: #F1EADD; }
-    .dropzone.drag { transform: scale(1.01); }
+    .dropzone { outline: none; transition: background-color 160ms ease, border-color 160ms ease, transform 260ms var(--spring); }
+    .dropzone:hover, .dropzone.drag { border-color: #0E7490; background-color: #EFE7D9; }
+    .dropzone.drag { transform: scale(1.015); }
     .dropzone:focus-visible { border-color: #0EA5E9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); }
-    .dropzone:active { transform: scale(0.995); }
+    .dropzone:active { transform: scale(0.99); }
     .dropzone .doc { transition: transform 320ms var(--spring); }
-    .dropzone:hover .doc, .dropzone.drag .doc { transform: translateY(-4px) rotate(-3deg); }
+    .dropzone:hover .doc, .dropzone.drag .doc { transform: translateY(-5px) rotate(-4deg); }
 
-    .row-link { outline: none; transition: background-color 160ms ease; }
-    .row-link:hover { background: #fff; }
-    .row-link:focus-visible { box-shadow: inset 0 0 0 2px #0EA5E9; }
-    .row-link:active { opacity: 0.8; }
-    .row-link .chev { transition: transform 220ms var(--spring); }
-    .row-link:hover .chev { transform: translateX(4px); }
+    .guide { outline: none; transition: transform 300ms var(--spring); }
+    .guide:hover { transform: translateY(-6px) rotate(0deg) !important; }
+    .guide:focus-visible { transform: translateY(-6px) rotate(0deg) !important; }
+    .guide:focus-visible .guide-body { box-shadow: inset 0 0 0 2px #0EA5E9; }
+    .guide:active { transform: translateY(-2px) rotate(0deg) !important; }
+    .guide .chev { transition: transform 220ms var(--spring); }
+    .guide:hover .chev { transform: translateX(4px); }
+
+    /* Language picker */
+    .lang-btn { background: rgba(255, 255, 255, 0.6); box-shadow: inset 0 0 0 1px rgba(18, 43, 64, 0.08); }
+    .lang-btn:hover, .lang-btn[aria-expanded="true"] { background: #fff; box-shadow: inset 0 0 0 1px rgba(18, 43, 64, 0.14), 0 2px 6px -2px rgba(18, 43, 64, 0.12); }
+    .lang-btn:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #0EA5E9; }
+    .lang-chev { transition: transform 260ms var(--spring); }
+    .lang-btn[aria-expanded="true"] .lang-chev { transform: rotate(180deg); }
+    .lang-menu { opacity: 0; transform: translateY(-6px) scale(0.97); transform-origin: top right; pointer-events: none; visibility: hidden; transition: opacity 160ms ease, transform 260ms var(--spring), visibility 0s linear 260ms; }
+    .lang-menu.open { opacity: 1; transform: none; pointer-events: auto; visibility: visible; transition: opacity 160ms ease, transform 260ms var(--spring), visibility 0s; }
+    .lang-menu:focus { outline: none; }
+    .lang-opt { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; font-size: 14px; font-weight: 500; color: #1E293B; cursor: pointer; line-height: 1.4; transition: background-color 120ms ease, transform 200ms var(--spring); }
+    .lang-opt:hover, .lang-opt.active { background: #F4EFE6; }
+    .lang-menu:focus-visible .lang-opt.active { box-shadow: inset 0 0 0 2px #0EA5E9; }
+    .lang-opt:active { transform: scale(0.98); }
+    .lang-opt[aria-selected="true"] { color: #122B40; font-weight: 600; }
+    .lang-badge { display: grid; place-items: center; width: 28px; height: 20px; border-radius: 4px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 500; color: #64748B; background: #EEF1F4; }
+    .lang-opt[aria-selected="true"] .lang-badge { color: #fff; background: #0E7490; }
+    .lang-check { visibility: hidden; }
+    .lang-opt[aria-selected="true"] .lang-check { visibility: visible; }
 
     details summary { list-style: none; }
     details summary::-webkit-details-marker { display: none; }
@@ -117,18 +155,17 @@
     .faq-q:focus-visible { box-shadow: 0 0 0 2px #0EA5E9; border-radius: 4px; }
     .faq-q:active { opacity: 0.75; }
 
-    /* Markdown syntax colouring in the sample */
     .tok-h, .tok-li { color: #0E7490; }
     .tok-p { color: #94A3B8; }
 
     /* Result */
-    .reveal { animation: reveal 480ms var(--spring) both; }
-    @keyframes reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    .reveal { animation: reveal 520ms var(--spring) both; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(16px) rotate(-1deg); } to { opacity: 1; transform: none; } }
     .tab { color: #64748B; outline: none; transition: background-color 160ms ease, color 160ms ease, transform 200ms var(--spring); }
     .tab:hover { color: #122B40; }
     .tab:focus-visible { box-shadow: 0 0 0 2px #0EA5E9; }
     .tab:active { transform: scale(0.97); }
-    .tab[aria-selected="true"] { background: #fff; color: #122B40; box-shadow: var(--elev-1); }
+    .tab[aria-selected="true"] { background: #fff; color: #122B40; box-shadow: 0 1px 2px rgba(18, 43, 64, 0.08), 0 2px 6px -2px rgba(18, 43, 64, 0.1); }
     .md-source { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; }
     .md-source:focus-visible { outline: none; border-color: #0E7490; }
     .md-preview { font-size: 15px; line-height: 1.7; color: #122B40; overflow-wrap: anywhere; }
@@ -142,16 +179,19 @@
     .md-preview ul { list-style: disc; padding-left: 1.4em; }
     .md-preview ol { list-style: decimal; padding-left: 1.4em; }
     .md-preview a { color: #0E7490; text-decoration: underline; text-underline-offset: 3px; }
-    .md-preview code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.86em; background: #EEF2F6; border-radius: 4px; padding: 0.1em 0.35em; }
-    .md-preview pre { background: #EEF2F6; border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+    .md-preview code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.86em; background: #F4EFE6; border-radius: 4px; padding: 0.1em 0.35em; }
+    .md-preview pre { background: #F4EFE6; border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
     .md-preview pre code { background: none; padding: 0; }
     .md-preview table { border-collapse: collapse; display: block; overflow-x: auto; }
     .md-preview th, .md-preview td { border: 1px solid #E3E6EC; padding: 6px 10px; text-align: left; }
-    .md-preview th { background: #F4F6F9; font-weight: 600; }
+    .md-preview th { background: #F7F4EE; font-weight: 600; }
     .md-preview blockquote { border-left: 3px solid #0E7490; padding-left: 1em; color: #64748B; }
     .md-preview hr { border: 0; border-top: 1px solid #E3E6EC; margin: 1.6em 0; }
     .md-preview img { max-width: 100%; }
 
+    @media (max-width: 767px) {
+      .tilt { transform: none !important; }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
     }
@@ -159,162 +199,155 @@
 </head>
 <body>
 
-  <div class="hero-bg grain relative">
-    <!-- Header -->
-    <header class="relative z-10 mx-auto flex max-w-[1200px] items-center justify-between px-6 py-5 lg:px-8">
-      <a href="#" class="link -m-1 p-1" aria-label="MarkFlow home">
-        <img src="assets/markflow-logo.png" alt="MarkFlow" class="h-7 w-auto sm:h-8" />
-      </a>
-      <nav class="flex items-center gap-2 sm:gap-4" aria-label="Main">
-        <a href="#" class="link hidden px-2 text-[15px] font-medium sm:inline">Pricing</a>
-        <div class="relative">
-          <label for="lang" class="sr-only">Language</label>
-          <select id="lang" class="field btn cursor-pointer appearance-none rounded-full border border-rule bg-white/70 py-2 pl-4 pr-8 text-[14px] font-medium text-muted">
-            <option>EN</option><option>DE</option>
-          </select>
-          <svg class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </div>
-        <a href="#" class="btn btn-ghost whitespace-nowrap rounded-full px-4 py-[7px] text-[14px] font-semibold">Sign in</a>
-      </nav>
-    </header>
-
-    <!-- Hero + converter -->
-    <section class="relative z-10 mx-auto grid max-w-[1200px] gap-10 px-6 pb-20 pt-10 lg:grid-cols-[1fr_520px] lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:gap-y-0 lg:px-8 lg:pb-32 lg:pt-20">
-      <div class="lg:col-start-1 lg:pt-6">
-        <h1 class="md-h text-[44px] font-extrabold leading-[1.02] sm:text-[64px] lg:text-[76px]"><span class="mk" aria-hidden="true">#</span>Any file in.<br />Clean Markdown out.</h1>
-        <p class="mt-8 max-w-[30em] text-[18px] leading-[1.7] text-slate2/80 sm:text-[20px]">
-          Drop in a PDF, Word file, slide deck or spreadsheet. MarkFlow keeps the headings, lists and tables, and gives you Markdown that's ready for your docs, your repo or an AI agent.
-        </p>
+  <!-- Header -->
+  <header class="z-20 mx-auto flex max-w-[1160px] items-center justify-between px-5 py-5 lg:px-8">
+    <a href="#" class="link -m-1 p-1" aria-label="MarkFlow home">
+      <img src="assets/markflow-logo.png" alt="MarkFlow" class="h-7 w-auto mix-blend-multiply sm:h-8" />
+    </a>
+    <nav class="flex items-center gap-2 sm:gap-4" aria-label="Main">
+      <a href="#" class="link hidden px-2 text-[15px] font-medium sm:inline">Pricing</a>
+      <div class="relative" id="langPicker">
+        <button type="button" id="langBtn" class="lang-btn btn flex items-center gap-1.5 rounded-full py-2 pl-3 pr-2.5 text-[14px] font-semibold text-slate2" aria-haspopup="listbox" aria-expanded="false" aria-controls="langMenu" aria-label="Language: English">
+          <svg class="h-4 w-4 text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.8 3.5 5.8 3.5 9s-1 6.2-3.5 9c-2.5-2.8-3.5-5.8-3.5-9s1-6.2 3.5-9Z"/></svg>
+          <span id="langCode">EN</span>
+          <svg class="lang-chev h-3.5 w-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <ul id="langMenu" class="lang-menu paper-2 absolute right-0 top-[calc(100%+10px)] z-50 w-[188px] rounded-[10px] bg-white p-1.5" role="listbox" aria-label="Language" tabindex="-1">
+          <li class="lang-opt" role="option" data-code="EN" aria-selected="true"><span class="lang-badge">EN</span>English<svg class="lang-check ml-auto h-4 w-4 text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg></li>
+          <li class="lang-opt" role="option" data-code="DE" aria-selected="false"><span class="lang-badge">DE</span>Deutsch<svg class="lang-check ml-auto h-4 w-4 text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg></li>
+        </ul>
       </div>
-
-      <!-- Converter: elevated surface. Sits right after the intro on mobile, in the right column on desktop. -->
-      <div class="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-        <div class="elev-3 rounded-[20px] bg-white p-5 sm:p-7">
-          <div id="dropzone" class="dropzone flex cursor-pointer flex-col items-center rounded-[14px] border-[1.5px] border-dashed border-[#D8CDB8] bg-paper px-6 py-10 text-center" tabindex="0" role="button" aria-label="Upload your file">
-            <img src="assets/markflow-icon.png" alt="" class="doc h-14 w-auto" />
-            <p class="mt-5 max-w-full truncate text-[18px] font-semibold text-navy" id="dzTitle">Drop a file here</p>
-            <p class="mt-1 text-[14px] text-muted" id="dzSub">or click to choose one from your computer</p>
-            <input type="file" id="fileInput" class="hidden" accept=".pdf,.docx,.pptx,.xlsx,.xls,.html,.csv,.json,.xml,.ipynb,.epub,.zip,.png,.jpg,.jpeg,.webp" />
-          </div>
-
-          <form class="mt-5 flex gap-2" id="urlForm">
-            <label class="relative flex-1">
-              <span class="sr-only">File URL</span>
-              <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
-              <input type="url" id="urlInput" placeholder="Or paste a link to a file" class="field w-full rounded-full border border-rule bg-base py-2.5 pl-10 pr-3 text-[14px] text-navy placeholder:text-muted" />
-            </label>
-            <button type="submit" class="btn btn-ghost rounded-full px-5 text-[14px] font-semibold">Fetch</button>
-          </form>
-
-          <div class="mt-5 flex items-center justify-between gap-3 border-t border-rule pt-5">
-            <label for="ocr" class="text-[14px] leading-[1.4] text-slate2">
-              <span class="font-semibold">Read scanned pages</span>
-              <span class="block text-[13px] text-muted">Text recognition for PDFs that are images</span>
-            </label>
-            <div class="relative shrink-0">
-              <select id="ocr" class="field btn w-[112px] cursor-pointer appearance-none rounded-full border border-rule bg-base py-1.5 pl-4 pr-8 text-[14px] text-navy">
-                <option>Auto</option><option>Always</option><option>Off</option>
-              </select>
-              <svg class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-          </div>
-
-          <button id="convertBtn" class="btn btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[16px] font-semibold" disabled>
-            <span>Convert</span>
-            <svg class="chev h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-          </button>
-          <p class="mt-3 hidden text-center text-[14px] text-muted" id="convertMsg" role="status" aria-live="polite"></p>
-          <p class="mt-4 text-center text-[13px] text-muted">3 free conversions a day. <a href="#" class="link font-semibold text-teal">Upgrade for 30</a></p>
-        </div>
-      </div>
-
-      <div class="lg:col-start-1 lg:row-start-2">
-        <p class="max-w-[34em] font-mono text-[13px] leading-[2] text-muted lg:mt-8">
-          .pdf .docx .pptx .xlsx .xls .csv .html .json .xml .ipynb .epub .zip .png .jpg .webp
-        </p>
-        <div class="mt-8 flex items-start gap-3 border-l-2 border-teal pl-4 text-[15px] leading-[1.6] text-slate2/80 lg:mt-10">
-          <p><span class="font-semibold text-navy">Your files stay on your device.</span> Conversion runs in your browser, nothing is uploaded. 10,000+ files converted so far.</p>
-        </div>
-      </div>
-    </section>
-  </div>
+      <a href="#" class="btn btn-ghost whitespace-nowrap rounded-full px-4 py-[7px] text-[14px] font-semibold">Sign in</a>
+    </nav>
+  </header>
 
   <main>
-    <!-- Result: floating surface -->
-    <section class="mx-auto max-w-[1200px] px-6 lg:px-8">
-      <div id="result" class="reveal elev-3 relative z-20 -mt-8 mb-16 rounded-[20px] bg-white p-5 sm:p-8 lg:-mt-16" hidden>
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <h2 class="text-[20px] font-bold tracking-[-0.02em]">Your Markdown</h2>
-          <div class="flex gap-1 rounded-full bg-base p-1" role="tablist" aria-label="Output view">
-            <button class="tab rounded-full px-4 py-1.5 text-[14px] font-semibold" role="tab" id="tabPreview" aria-selected="true" aria-controls="previewPane">Preview</button>
-            <button class="tab rounded-full px-4 py-1.5 text-[14px] font-semibold" role="tab" id="tabSource" aria-selected="false" aria-controls="mdOutput">Markdown</button>
+    <!-- Hero: a stack of paper, the converter on top -->
+    <section class="mx-auto max-w-[1160px] px-5 pb-20 pt-8 lg:px-8 lg:pb-28 lg:pt-14">
+      <div class="relative">
+        <div class="back paper-1 bg-paper" style="--x:-14px;--y:18px;--r:-2.2deg" aria-hidden="true"></div>
+        <div class="back paper-1 bg-[#FBFBFC]" style="--x:12px;--y:10px;--r:1.4deg" aria-hidden="true"></div>
+        <div class="paper-2 relative">
+          <div class="fold rounded-[4px] bg-white">
+            <div class="grid gap-10 px-6 pb-8 pt-12 sm:px-10 lg:grid-cols-[1fr_440px] lg:gap-14 lg:px-14 lg:pb-14 lg:pt-16">
+              <div class="lg:pt-4">
+                <h1 class="text-[42px] font-extrabold leading-[1.04] tracking-[-0.035em] sm:text-[60px] lg:text-[68px]">Paper in.<br />Markdown out.</h1>
+                <p class="mt-7 max-w-[30em] text-[17px] text-slate2/80 sm:text-[19px]">Drop in a PDF, Word file, slide deck or spreadsheet. MarkFlow keeps the headings, lists and tables, and hands you Markdown that's ready for your docs, your repo or an AI agent.</p>
+                <p class="mt-8 flex max-w-[30em] items-start gap-3 text-[15px] leading-[1.6] text-slate2/80">
+                  <svg class="mt-0.5 h-5 w-5 shrink-0 text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round"/></svg>
+                  <span><span class="font-semibold text-navy">Your files stay on your device.</span> Conversion runs in your browser, nothing is uploaded.</span>
+                </p>
+              </div>
+
+              <!-- Converter -->
+              <div class="relative">
+                <span class="tape absolute -top-4 left-[calc(50%-56px)] z-10 h-7 w-28" aria-hidden="true"></span>
+                <div class="rounded-[6px] bg-paper p-4 sm:p-5">
+                  <div id="dropzone" class="dropzone flex cursor-pointer flex-col items-center rounded-[4px] border-[1.5px] border-dashed border-[#CDBFA6] px-6 py-9 text-center" tabindex="0" role="button" aria-label="Upload your file">
+                    <img src="assets/markflow-icon.png" alt="" class="doc h-14 w-auto mix-blend-multiply" />
+                    <p class="mt-4 max-w-full truncate text-[18px] font-semibold text-navy" id="dzTitle">Drop a file here</p>
+                    <p class="mt-1 text-[14px] text-[#7A6E5A]" id="dzSub">or click to choose one from your computer</p>
+                    <input type="file" id="fileInput" class="hidden" accept=".pdf,.docx,.pptx,.xlsx,.xls,.html,.csv,.json,.xml,.ipynb,.epub,.zip,.png,.jpg,.jpeg,.webp" />
+                  </div>
+
+                  <form class="mt-4 flex gap-2" id="urlForm">
+                    <label class="relative flex-1">
+                      <span class="sr-only">File URL</span>
+                      <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+                      <input type="url" id="urlInput" placeholder="Or paste a file link" class="field w-full rounded-full border border-[#E2D8C6] bg-white py-2.5 pl-10 pr-3 text-[14px] text-navy placeholder:text-muted" />
+                    </label>
+                    <button type="submit" class="btn btn-ghost rounded-full px-5 text-[14px] font-semibold">Fetch</button>
+                  </form>
+
+                  <div class="mt-4 flex items-center justify-between gap-3 border-t border-dashed border-[#DCD0BB] pt-4">
+                    <label for="ocr" class="text-[14px] leading-[1.4] text-slate2">
+                      <span class="font-semibold">Read scanned pages</span>
+                      <span class="block text-[13px] text-[#7A6E5A]">Text recognition for PDFs that are images</span>
+                    </label>
+                    <div class="relative shrink-0">
+                      <select id="ocr" class="field btn w-[112px] cursor-pointer appearance-none rounded-full border border-[#E2D8C6] bg-white py-1.5 pl-4 pr-8 text-[14px] text-navy">
+                        <option>Auto</option><option>Always</option><option>Off</option>
+                      </select>
+                      <svg class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                  </div>
+                </div>
+
+                <button id="convertBtn" class="btn btn-primary mt-5 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[16px] font-semibold" disabled>
+                  <span>Convert</span>
+                  <svg class="chev h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+                </button>
+                <p class="mt-3 hidden text-center text-[14px] text-muted" id="convertMsg" role="status" aria-live="polite"></p>
+                <p class="mt-3 text-center text-[13px] text-muted">3 free conversions a day. <a href="#" class="link font-semibold text-teal">Upgrade for 30</a></p>
+              </div>
+            </div>
           </div>
         </div>
-        <div id="previewPane" class="md-preview mt-6 max-h-[600px] overflow-auto rounded-xl border border-rule bg-base px-6 py-5" role="tabpanel" aria-labelledby="tabPreview" tabindex="0"></div>
-        <textarea id="mdOutput" class="md-source mt-6 hidden h-[420px] w-full resize-y rounded-xl border border-rule bg-base p-5 text-[13px] leading-[1.7] text-navy sm:h-[600px]" role="tabpanel" aria-labelledby="tabSource" spellcheck="false"></textarea>
-        <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
-          <p class="font-mono text-[13px] text-muted" id="resultMeta"></p>
-          <div class="flex gap-2">
-            <button id="copyBtn" class="btn btn-ghost rounded-full px-5 py-2 text-[14px] font-semibold">Copy</button>
-            <button id="downloadBtn" class="btn btn-primary rounded-full px-5 py-2 text-[14px] font-semibold">Download .md</button>
+      </div>
+
+      <!-- Result: a fresh sheet slides onto the pile -->
+      <div id="result" class="reveal paper-2 relative mt-10" hidden>
+        <div class="fold rounded-[4px] bg-white px-5 pb-6 pt-8 sm:px-10 sm:pb-8 sm:pt-10">
+          <div class="flex flex-wrap items-center justify-between gap-4 pr-8">
+            <h2 class="text-[22px] font-bold tracking-[-0.02em]">Your Markdown</h2>
+            <div class="flex gap-1 rounded-full bg-paper p-1" role="tablist" aria-label="Output view">
+              <button class="tab rounded-full px-4 py-1.5 text-[14px] font-semibold" role="tab" id="tabPreview" aria-selected="true" aria-controls="previewPane">Preview</button>
+              <button class="tab rounded-full px-4 py-1.5 text-[14px] font-semibold" role="tab" id="tabSource" aria-selected="false" aria-controls="mdOutput">Markdown</button>
+            </div>
+          </div>
+          <div id="previewPane" class="md-preview mt-6 max-h-[600px] overflow-auto rounded-[4px] border border-rule px-6 py-5" role="tabpanel" aria-labelledby="tabPreview" tabindex="0"></div>
+          <textarea id="mdOutput" class="md-source mt-6 hidden h-[420px] w-full resize-y rounded-[4px] border border-rule bg-[#FCFBF8] p-5 text-[13px] leading-[1.7] text-navy sm:h-[600px]" role="tabpanel" aria-labelledby="tabSource" spellcheck="false"></textarea>
+          <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <p class="font-mono text-[13px] text-muted" id="resultMeta"></p>
+            <div class="flex gap-2">
+              <button id="copyBtn" class="btn btn-ghost rounded-full px-5 py-2 text-[14px] font-semibold">Copy</button>
+              <button id="downloadBtn" class="btn btn-primary rounded-full px-5 py-2 text-[14px] font-semibold">Download .md</button>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- How it works -->
-    <section class="mx-auto max-w-[1200px] px-6 py-20 lg:px-8 lg:py-28">
-      <h2 class="md-h text-[32px] font-bold leading-[1.1] sm:text-[44px]"><span class="mk" aria-hidden="true">##</span>How it works</h2>
-      <ol class="relative mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-        <li class="relative border-t-2 border-teal pt-6">
-          <span class="font-mono text-[14px] font-medium text-teal">1</span>
-          <h3 class="mt-2 text-[19px] font-semibold tracking-[-0.01em]">Add your file</h3>
-          <p class="mt-2 text-[15px] text-muted">Drop it in, pick it from your computer, or paste a link to it.</p>
+    <!-- How it works: index cards -->
+    <section class="mx-auto max-w-[1160px] px-5 py-14 lg:px-8 lg:py-20">
+      <h2 class="text-center text-[32px] font-bold leading-[1.1] tracking-[-0.03em] sm:text-[44px]">How it works</h2>
+      <ol class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        <li class="tilt paper-1 index-card rounded-[3px] px-6 pb-6 pt-5" style="transform: rotate(-1.6deg)">
+          <p class="flex h-[42px] items-end gap-3 text-[18px] font-semibold tracking-[-0.01em]"><span class="font-mono text-[15px] font-medium text-teal">1</span>Add your file</p>
+          <p class="lines mt-[22px] text-[15px] leading-[28px] text-slate2/75">Drop it in, pick it from your computer, or paste a link to it.</p>
         </li>
-        <li class="relative border-t-2 border-teal/60 pt-6">
-          <span class="font-mono text-[14px] font-medium text-teal">2</span>
-          <h3 class="mt-2 text-[19px] font-semibold tracking-[-0.01em]">Convert</h3>
-          <p class="mt-2 text-[15px] text-muted">MarkFlow reads the text, headings, lists and tables and writes them as Markdown.</p>
+        <li class="tilt paper-1 index-card rounded-[3px] px-6 pb-6 pt-5 lg:mt-6" style="transform: rotate(1.2deg)">
+          <p class="flex h-[42px] items-end gap-3 text-[18px] font-semibold tracking-[-0.01em]"><span class="font-mono text-[15px] font-medium text-teal">2</span>Convert</p>
+          <p class="lines mt-[22px] text-[15px] leading-[28px] text-slate2/75">MarkFlow reads the text, headings, lists and tables and writes them as Markdown.</p>
         </li>
-        <li class="relative border-t-2 border-teal/40 pt-6">
-          <span class="font-mono text-[14px] font-medium text-teal">3</span>
-          <h3 class="mt-2 text-[19px] font-semibold tracking-[-0.01em]">Check the preview</h3>
-          <p class="mt-2 text-[15px] text-muted">See the formatted result, or switch to the Markdown and fix anything by hand.</p>
+        <li class="tilt paper-1 index-card rounded-[3px] px-6 pb-6 pt-5" style="transform: rotate(-0.8deg)">
+          <p class="flex h-[42px] items-end gap-3 text-[18px] font-semibold tracking-[-0.01em]"><span class="font-mono text-[15px] font-medium text-teal">3</span>Check the preview</p>
+          <p class="lines mt-[22px] text-[15px] leading-[28px] text-slate2/75">See the formatted result, or switch to Markdown and fix anything by hand.</p>
         </li>
-        <li class="relative border-t-2 border-teal/20 pt-6">
-          <span class="font-mono text-[14px] font-medium text-teal">4</span>
-          <h3 class="mt-2 text-[19px] font-semibold tracking-[-0.01em]">Copy or download</h3>
-          <p class="mt-2 text-[15px] text-muted">Take the .md file into Git, a docs site, a prompt library or your editor.</p>
+        <li class="tilt paper-1 index-card rounded-[3px] px-6 pb-6 pt-5 lg:mt-6" style="transform: rotate(1.8deg)">
+          <p class="flex h-[42px] items-end gap-3 text-[18px] font-semibold tracking-[-0.01em]"><span class="font-mono text-[15px] font-medium text-teal">4</span>Copy or download</p>
+          <p class="lines mt-[22px] text-[15px] leading-[28px] text-slate2/75">Take the .md file into Git, a docs site, a prompt library or your editor.</p>
         </li>
       </ol>
     </section>
 
     <!-- Before / after -->
-    <section class="border-y border-rule bg-white">
-      <div class="mx-auto grid max-w-[1200px] gap-14 px-6 py-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16 lg:px-8 lg:py-28">
+    <section class="mx-auto max-w-[1160px] px-5 py-14 lg:px-8 lg:py-20">
+      <div class="grid items-center gap-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
         <div>
-          <h2 class="md-h text-[32px] font-bold leading-[1.1] sm:text-[44px]"><span class="mk" aria-hidden="true">##</span>Why Markdown?</h2>
+          <h2 class="text-[32px] font-bold leading-[1.1] tracking-[-0.03em] sm:text-[44px]">Why Markdown?</h2>
           <p class="mt-6 text-[17px] text-slate2/80">Copying text out of a PDF or a slide deck breaks it. Markdown keeps the structure as plain text that people, Git and AI tools can all read.</p>
-          <dl class="mt-10 space-y-8">
-            <div>
-              <dt class="text-[17px] font-semibold">AI tools read it cleanly</dt>
-              <dd class="mt-1 text-[15px] text-muted">Layout, images and proprietary formatting get in the way. Markdown gives an agent the structure and nothing else.</dd>
-            </div>
-            <div>
-              <dt class="text-[17px] font-semibold">Your knowledge leaves the app</dt>
-              <dd class="mt-1 text-[15px] text-muted">Notes and procedures stuck in DOCX, PPTX or XLSX become text you can review, version and reuse.</dd>
-            </div>
-            <div>
-              <dt class="text-[17px] font-semibold">No cleanup by hand</dt>
-              <dd class="mt-1 text-[15px] text-muted">Headings, lists, tables and code blocks come through intact, so you don't rebuild them line by line.</dd>
-            </div>
+          <dl class="mt-10 space-y-7">
+            <div><dt class="text-[17px] font-semibold">AI tools read it cleanly</dt><dd class="mt-1 text-[15px] text-slate2/70">Layout, images and proprietary formatting get in the way. Markdown gives an agent the structure and nothing else.</dd></div>
+            <div><dt class="text-[17px] font-semibold">Your knowledge leaves the app</dt><dd class="mt-1 text-[15px] text-slate2/70">Notes and procedures stuck in DOCX, PPTX or XLSX become text you can review, version and reuse.</dd></div>
+            <div><dt class="text-[17px] font-semibold">No cleanup by hand</dt><dd class="mt-1 text-[15px] text-slate2/70">Headings, lists, tables and code blocks come through intact, so you don't rebuild them line by line.</dd></div>
           </dl>
         </div>
 
-        <figure class="relative" aria-label="The same page copied from a PDF, and converted by MarkFlow">
-          <div class="grid gap-4 sm:grid-cols-2 sm:gap-0">
-            <div class="elev-1 rounded-[14px] bg-paper p-5 sm:mr-[-24px] sm:mt-10 sm:rotate-[-2deg] sm:pr-10">
-              <p class="text-[12px] font-semibold text-[#9A8B70]">Copied from report.pdf</p>
+        <figure class="relative pb-4" aria-label="The same page copied from a PDF, and converted by MarkFlow">
+          <div class="grid gap-6 sm:grid-cols-2 sm:gap-0">
+            <div class="tilt paper-1 rounded-[3px] bg-paper p-6 sm:mr-[-30px] sm:mt-12 sm:pr-12" style="transform: rotate(-3deg)">
+              <p class="text-[12px] font-semibold text-[#8C7D63]">Copied from report.pdf</p>
               <pre class="mt-3 whitespace-pre-wrap font-sans text-[13px] leading-[1.6] text-[#5B5245]">Quarterly Report        Page 3 of 12
 Revenue grew 14% in Q3, driven by new con-
 tracts in the EU region.
@@ -324,9 +357,10 @@ Region Q2 Q3
 EU 1.2M 1.6M  US 2.4M 2.5M
 Confidential – do not distribute</pre>
             </div>
-            <div class="elev-2 relative rounded-[14px] border border-rule bg-white p-5">
-              <p class="text-[12px] font-semibold text-teal">report.md</p>
-              <pre class="mt-3 overflow-x-auto font-mono text-[12.5px] leading-[1.7] text-navy"><span class="tok-h">##</span> Quarterly report
+            <div class="tilt paper-2 relative" style="transform: rotate(1.5deg)">
+              <div class="fold fold-sm rounded-[3px] bg-white p-6">
+                <p class="text-[12px] font-semibold text-teal">report.md</p>
+                <pre class="mt-3 overflow-x-auto font-mono text-[12.5px] leading-[1.7] text-navy"><span class="tok-h">##</span> Quarterly report
 
 Revenue grew 14% in Q3, driven by
 new contracts in the EU region.
@@ -338,92 +372,97 @@ new contracts in the EU region.
 <span class="tok-p">| ------ | ---- | ---- |</span>
 <span class="tok-p">|</span> EU     <span class="tok-p">|</span> 1.2M <span class="tok-p">|</span> 1.6M <span class="tok-p">|</span>
 <span class="tok-p">|</span> US     <span class="tok-p">|</span> 2.4M <span class="tok-p">|</span> 2.5M <span class="tok-p">|</span></pre>
+              </div>
             </div>
           </div>
+          <svg class="pointer-events-none absolute left-[38%] top-0 hidden h-16 w-28 text-teal sm:block" viewBox="0 0 112 64" fill="none" aria-hidden="true"><path d="M4 56C24 18 60 6 98 14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 7"/><path d="m88 4 12 10-13 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </figure>
       </div>
     </section>
 
-    <!-- Formats -->
-    <section class="mx-auto max-w-[1200px] px-6 py-20 lg:px-8 lg:py-28">
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
-        <div>
-          <h2 class="md-h text-[32px] font-bold leading-[1.1] sm:text-[44px]"><span class="mk" aria-hidden="true">##</span>What each file becomes</h2>
-          <p class="mt-6 max-w-[26em] text-[17px] text-slate2/80">One converter for all of them, so you don't switch tools between a PDF and a spreadsheet.</p>
-        </div>
-        <table class="w-full text-left text-[15px]">
-          <caption class="sr-only">Supported formats and their Markdown output</caption>
-          <thead class="sr-only"><tr><th scope="col">File type</th><th scope="col">Markdown you get</th></tr></thead>
-          <tbody class="divide-y divide-rule border-y border-rule">
-            <tr><th scope="row" class="w-[38%] py-4 pr-6 align-top font-semibold">PDF</th><td class="py-4 text-muted">Headings found by font size, lists and paragraphs. Scanned pages are read with OCR.</td></tr>
-            <tr><th scope="row" class="py-4 pr-6 align-top font-semibold">Word <span class="font-mono text-[13px] font-normal text-muted">.docx</span></th><td class="py-4 text-muted">Headings, lists, links and tables.</td></tr>
-            <tr><th scope="row" class="py-4 pr-6 align-top font-semibold">PowerPoint <span class="font-mono text-[13px] font-normal text-muted">.pptx</span></th><td class="py-4 text-muted">A section per slide, bullets at their original indent, tables.</td></tr>
-            <tr><th scope="row" class="py-4 pr-6 align-top font-semibold">Excel and CSV</th><td class="py-4 text-muted">A Markdown table for each sheet.</td></tr>
-            <tr><th scope="row" class="py-4 pr-6 align-top font-semibold">Web pages <span class="font-mono text-[13px] font-normal text-muted">.html</span></th><td class="py-4 text-muted">The page content, without scripts and styles.</td></tr>
-            <tr><th scope="row" class="py-4 pr-6 align-top font-semibold">Jupyter <span class="font-mono text-[13px] font-normal text-muted">.ipynb</span></th><td class="py-4 text-muted">Text cells as Markdown, code and outputs as code blocks.</td></tr>
-            <tr><th scope="row" class="py-4 pr-6 align-top font-semibold">JSON and XML</th><td class="py-4 text-muted">Formatted code blocks.</td></tr>
-            <tr><th scope="row" class="py-4 pr-6 align-top font-semibold">EPUB</th><td class="py-4 text-muted">Every chapter, in reading order.</td></tr>
-            <tr><th scope="row" class="py-4 pr-6 align-top font-semibold">ZIP</th><td class="py-4 text-muted">Each file inside converted, one section per file.</td></tr>
-            <tr><th scope="row" class="py-4 pr-6 align-top font-semibold">Images <span class="font-mono text-[13px] font-normal text-muted">.png .jpg .webp</span></th><td class="py-4 text-muted">The text in the image, read with OCR.</td></tr>
-          </tbody>
-        </table>
+    <!-- Formats: file folders -->
+    <section class="mx-auto max-w-[1160px] px-5 py-14 lg:px-8 lg:py-20">
+      <div class="max-w-[640px]">
+        <h2 class="text-[32px] font-bold leading-[1.1] tracking-[-0.03em] sm:text-[44px]">What each file becomes</h2>
+        <p class="mt-6 text-[17px] text-slate2/80">One converter for all of them, so you don't switch tools between a PDF and a spreadsheet.</p>
       </div>
-    </section>
-
-    <!-- Uses -->
-    <section class="bg-navy text-white">
-      <div class="mx-auto max-w-[1200px] px-6 py-20 lg:px-8 lg:py-28">
-        <h2 class="md-h max-w-[16em] text-[32px] font-bold leading-[1.1] sm:text-[44px]"><span class="mk !text-sky" aria-hidden="true">##</span>What people do with the output</h2>
-        <div class="mt-14 grid gap-x-12 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-          <div><h3 class="text-[17px] font-semibold">Give AI agents context</h3><p class="mt-2 text-[15px] text-white/65">Clear structure helps with summaries, retrieval and following instructions.</p></div>
-          <div><h3 class="text-[17px] font-semibold">Write skills and prompts</h3><p class="mt-2 text-[15px] text-white/65">Turn procedures and product notes into agent instructions you can edit.</p></div>
-          <div><h3 class="text-[17px] font-semibold">Keep docs in Git</h3><p class="mt-2 text-[15px] text-white/65">Plain text is easy to diff, review and version alongside your code.</p></div>
-          <div><h3 class="text-[17px] font-semibold">Move a knowledge base</h3><p class="mt-2 text-[15px] text-white/65">Bring old DOCX, PDF and slide content into a Markdown wiki without retyping it.</p></div>
-          <div><h3 class="text-[17px] font-semibold">Make files searchable</h3><p class="mt-2 text-[15px] text-white/65">Small text files are simple to index, search and embed.</p></div>
-          <div><h3 class="text-[17px] font-semibold">Convert without installing</h3><p class="mt-2 text-[15px] text-white/65">It runs in the browser. No command line, no setup.</p></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Blog -->
-    <section class="mx-auto max-w-[1200px] px-6 py-20 lg:px-8 lg:py-28">
-      <h2 class="md-h text-[32px] font-bold leading-[1.1] sm:text-[44px]"><span class="mk" aria-hidden="true">##</span>Guides</h2>
-      <ul class="mt-12 divide-y divide-rule border-y border-rule">
-        <li><a href="#" class="row-link -mx-4 grid gap-2 rounded-xl px-4 py-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_24px] sm:items-center sm:gap-10">
-          <h3 class="text-[18px] font-semibold leading-[1.35] tracking-[-0.01em]">Batch convert PDFs to Markdown</h3>
-          <p class="text-[15px] text-muted">Convert several PDFs at once, check tables and OCR output, and keep the .md files organized.</p>
-          <svg class="chev hidden h-5 w-5 text-teal sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-        </a></li>
-        <li><a href="#" class="row-link -mx-4 grid gap-2 rounded-xl px-4 py-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_24px] sm:items-center sm:gap-10">
-          <h3 class="text-[18px] font-semibold leading-[1.35] tracking-[-0.01em]">Keep a PDF's structure when you prepare it for AI</h3>
-          <p class="text-[15px] text-muted">A workflow for RAG systems and assistants that keeps headings and tables intact.</p>
-          <svg class="chev hidden h-5 w-5 text-teal sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-        </a></li>
-        <li><a href="#" class="row-link -mx-4 grid gap-2 rounded-xl px-4 py-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_24px] sm:items-center sm:gap-10">
-          <h3 class="text-[18px] font-semibold leading-[1.35] tracking-[-0.01em]">Build a knowledge base from Word, PDF and web pages</h3>
-          <p class="text-[15px] text-muted">Turn mixed sources into one Markdown knowledge base for assistants and team wikis.</p>
-          <svg class="chev hidden h-5 w-5 text-teal sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-        </a></li>
+      <ul class="mt-16 grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-5">
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">PDF</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">Headings found by font size, lists and paragraphs. Scanned pages are read with OCR.</p></li>
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">Word</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">Headings, lists, links and tables.</p></li>
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">PowerPoint</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">A section per slide, bullets at their original indent, tables.</p></li>
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">Excel and CSV</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">A Markdown table for each sheet.</p></li>
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">Web pages</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">The page content, without scripts and styles.</p></li>
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">Jupyter</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">Text cells as Markdown, code and outputs as code blocks.</p></li>
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">JSON and XML</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">Formatted code blocks.</p></li>
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">EPUB</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">Every chapter, in reading order.</p></li>
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">ZIP</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">Each file inside converted, one section per file.</p></li>
+        <li class="folder paper-1 px-5 pb-5 pt-4"><h3 class="text-[16px] font-semibold">Images</h3><p class="mt-2 text-[14px] leading-[1.6] text-[#5E5546]">The text in the image, read with OCR.</p></li>
       </ul>
+      <p class="mt-8 font-mono text-[13px] text-muted">.pdf .docx .pptx .xlsx .xls .csv .html .json .xml .ipynb .epub .zip .png .jpg .webp</p>
     </section>
 
-    <!-- FAQ -->
-    <section class="mx-auto grid max-w-[1200px] gap-10 px-6 pb-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16 lg:px-8 lg:pb-32">
-      <div class="lg:sticky lg:top-10 lg:self-start">
-        <h2 class="md-h text-[32px] font-bold leading-[1.1] sm:text-[44px]"><span class="mk" aria-hidden="true">##</span>Questions</h2>
-        <p class="mt-6 text-[17px] text-slate2/80">Something else? Write to <a href="mailto:support@markflow.example" class="link font-semibold text-teal">support@markflow.example</a>.</p>
+    <!-- Uses: a notebook page -->
+    <section class="mx-auto max-w-[1160px] px-5 py-14 lg:px-8 lg:py-20">
+      <div class="tilt paper-2 notebook rounded-[3px] pb-8 pl-[88px] pr-6 pt-16 sm:pr-12 lg:pb-16" style="transform: rotate(-0.6deg)">
+        <h2 class="text-[30px] font-bold leading-[64px] tracking-[-0.03em] sm:text-[40px]">What people do with the output</h2>
+        <div class="mt-8 grid gap-x-12 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="pb-8"><h3 class="text-[17px] font-semibold leading-[32px]">Give AI agents context</h3><p class="text-[15px] leading-[32px] text-slate2/70">Clear structure helps with summaries, retrieval and following instructions.</p></div>
+          <div class="pb-8"><h3 class="text-[17px] font-semibold leading-[32px]">Write skills and prompts</h3><p class="text-[15px] leading-[32px] text-slate2/70">Turn procedures and product notes into agent instructions you can edit.</p></div>
+          <div class="pb-8"><h3 class="text-[17px] font-semibold leading-[32px]">Keep docs in Git</h3><p class="text-[15px] leading-[32px] text-slate2/70">Plain text is easy to diff, review and version alongside your code.</p></div>
+          <div class="pb-8"><h3 class="text-[17px] font-semibold leading-[32px]">Move a knowledge base</h3><p class="text-[15px] leading-[32px] text-slate2/70">Bring old DOCX, PDF and slide content into a Markdown wiki without retyping it.</p></div>
+          <div class="pb-8"><h3 class="text-[17px] font-semibold leading-[32px]">Make files searchable</h3><p class="text-[15px] leading-[32px] text-slate2/70">Small text files are simple to index, search and embed.</p></div>
+          <div class="pb-8"><h3 class="text-[17px] font-semibold leading-[32px]">Convert without installing</h3><p class="text-[15px] leading-[32px] text-slate2/70">It runs in the browser. No command line, no setup.</p></div>
+        </div>
       </div>
-      <div class="border-t border-rule" id="faq"></div>
+    </section>
+
+    <!-- Guides -->
+    <section class="mx-auto max-w-[1160px] px-5 py-14 lg:px-8 lg:py-20">
+      <h2 class="text-[32px] font-bold leading-[1.1] tracking-[-0.03em] sm:text-[44px]">Guides</h2>
+      <div class="mt-12 grid gap-8 md:grid-cols-3">
+        <a href="#" class="guide tilt paper-1 block" style="transform: rotate(-1deg)">
+          <div class="guide-body fold fold-sm flex h-full flex-col rounded-[3px] bg-white p-6 pt-8">
+            <h3 class="text-[18px] font-semibold leading-[1.35] tracking-[-0.01em]">Batch convert PDFs to Markdown</h3>
+            <p class="mt-3 text-[15px] text-slate2/70">Convert several PDFs at once, check tables and OCR output, and keep the .md files organized.</p>
+            <span class="mt-auto inline-flex items-center gap-1.5 pt-8 text-[14px] font-semibold text-teal">Read the guide <svg class="chev h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
+          </div>
+        </a>
+        <a href="#" class="guide tilt paper-1 block" style="transform: rotate(0.8deg)">
+          <div class="guide-body fold fold-sm flex h-full flex-col rounded-[3px] bg-white p-6 pt-8">
+            <h3 class="text-[18px] font-semibold leading-[1.35] tracking-[-0.01em]">Keep a PDF's structure when you prepare it for AI</h3>
+            <p class="mt-3 text-[15px] text-slate2/70">A workflow for RAG systems and assistants that keeps headings and tables intact.</p>
+            <span class="mt-auto inline-flex items-center gap-1.5 pt-8 text-[14px] font-semibold text-teal">Read the guide <svg class="chev h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
+          </div>
+        </a>
+        <a href="#" class="guide tilt paper-1 block" style="transform: rotate(-0.6deg)">
+          <div class="guide-body fold fold-sm flex h-full flex-col rounded-[3px] bg-white p-6 pt-8">
+            <h3 class="text-[18px] font-semibold leading-[1.35] tracking-[-0.01em]">Build a knowledge base from Word, PDF and web pages</h3>
+            <p class="mt-3 text-[15px] text-slate2/70">Turn mixed sources into one Markdown knowledge base for assistants and team wikis.</p>
+            <span class="mt-auto inline-flex items-center gap-1.5 pt-8 text-[14px] font-semibold text-teal">Read the guide <svg class="chev h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- FAQ: one long sheet -->
+    <section class="mx-auto max-w-[880px] px-5 pb-24 pt-16 lg:px-8 lg:pb-32 lg:pt-24">
+      <div class="paper-2">
+        <div class="fold rounded-[4px] bg-white px-6 pb-10 pt-12 sm:px-14 sm:pb-14 sm:pt-16">
+          <h2 class="text-[32px] font-bold leading-[1.1] tracking-[-0.03em] sm:text-[44px]">Questions</h2>
+          <p class="mt-4 text-[17px] text-slate2/80">Something else? Write to <a href="mailto:support@markflow.example" class="link font-semibold text-teal">support@markflow.example</a>.</p>
+          <div class="mt-10 border-t border-rule" id="faq"></div>
+        </div>
+      </div>
     </section>
   </main>
 
   <!-- Footer -->
   <footer class="footer bg-navy text-white/65">
-    <div class="mx-auto max-w-[1200px] px-6 pb-10 pt-16 lg:px-8">
+    <div class="mx-auto max-w-[1160px] px-5 pb-10 pt-16 lg:px-8">
       <div class="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.6fr_repeat(5,1fr)]">
         <div class="col-span-2 sm:col-span-3 lg:col-span-1">
           <img src="assets/markflow-logo-reverse.png" alt="MarkFlow" class="h-8 w-auto" />
-          <p class="mt-4 max-w-[18em] text-[14px]">Any file in, clean Markdown out. Runs in your browser.</p>
+          <p class="mt-4 max-w-[18em] text-[14px]">Paper in, Markdown out. Runs in your browser.</p>
         </div>
         <div><h3 class="text-[14px] font-semibold text-white">Converters</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#" class="link">PDF to Markdown</a></li><li><a href="#" class="link">Word to Markdown</a></li><li><a href="#" class="link">PowerPoint to Markdown</a></li><li><a href="#" class="link">EPUB to Markdown</a></li></ul></div>
         <div><h3 class="text-[14px] font-semibold text-white">More tools</h3><ul class="mt-4 space-y-2 text-[14px]"><li><a href="#" class="link">Excel to Markdown</a></li><li><a href="#" class="link">HTML to Markdown</a></li><li><a href="#" class="link">CSV to Markdown</a></li><li><a href="#" class="link">PDF to text</a></li></ul></div>
@@ -441,6 +480,50 @@ new contracts in the EU region.
   </footer>
 
   <script>
+    // Language picker
+    (() => {
+      const btn = document.getElementById('langBtn');
+      const menu = document.getElementById('langMenu');
+      const opts = [...menu.querySelectorAll('[role="option"]')];
+      let active = 0;
+      const setActive = i => {
+        active = (i + opts.length) % opts.length;
+        opts.forEach((o, j) => o.classList.toggle('active', j === active));
+      };
+      const open = () => {
+        menu.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        setActive(opts.findIndex(o => o.getAttribute('aria-selected') === 'true'));
+        menu.focus();
+      };
+      const close = (refocus = true) => {
+        menu.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        opts.forEach(o => o.classList.remove('active'));
+        if (refocus) btn.focus();
+      };
+      const choose = i => {
+        opts.forEach((o, j) => o.setAttribute('aria-selected', j === i));
+        document.getElementById('langCode').textContent = opts[i].dataset.code;
+        btn.setAttribute('aria-label', `Language: ${opts[i].textContent.trim()}`);
+        close();
+      };
+      btn.addEventListener('click', () => menu.classList.contains('open') ? close() : open());
+      btn.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(); } });
+      opts.forEach((o, i) => {
+        o.addEventListener('click', () => choose(i));
+        o.addEventListener('mousemove', () => setActive(i));
+      });
+      menu.addEventListener('keydown', e => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(active); }
+        else if (e.key === 'Escape') close();
+        else if (e.key === 'Tab') close(false);
+      });
+      document.addEventListener('click', e => { if (menu.classList.contains('open') && !document.getElementById('langPicker').contains(e.target)) close(false); });
+    })();
+
     // FAQ
     const faqs = [
       ['What is MarkFlow?', 'MarkFlow is a browser-based converter that turns PDFs, Office documents, web pages, and other files into clean, structured Markdown.'],
@@ -463,7 +546,7 @@ new contracts in the EU region.
           <span>${q}</span>
           <svg class="plus h-4 w-4 shrink-0 text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </summary>
-        <p class="max-w-[38em] pb-6 pr-8 text-[15px] text-muted">${a}</p>
+        <p class="max-w-[38em] pb-6 pr-8 text-[15px] text-slate2/70">${a}</p>
       </details>`).join('');
 
     // Upload
