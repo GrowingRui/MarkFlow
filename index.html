@@ -68,11 +68,11 @@
               <div class="relative">
                 <span class="tape absolute -top-4 left-[calc(50%-56px)] z-10 h-7 w-28" aria-hidden="true"></span>
                 <div class="rounded-[6px] bg-paper p-4 sm:p-5">
-                  <div id="dropzone" class="dropzone flex cursor-pointer flex-col items-center rounded-[4px] border-[1.5px] border-dashed border-[#CDBFA6] px-6 py-9 text-center" tabindex="0" role="button" aria-label="Upload your file">
+                  <div id="dropzone" class="dropzone flex cursor-pointer flex-col items-center rounded-[4px] border-[1.5px] border-dashed border-[#CDBFA6] px-6 py-9 text-center" tabindex="0" role="button" aria-label="Upload your files">
                     <img src="assets/markflow-icon.png" alt="" class="doc h-14 w-auto mix-blend-multiply" />
-                    <p class="mt-4 max-w-full truncate text-[18px] font-semibold text-navy" id="dzTitle">Drop a file here</p>
-                    <p class="mt-1 text-[14px] text-[#7A6E5A]" id="dzSub">or click to choose one from your computer</p>
-                    <input type="file" id="fileInput" class="hidden" accept=".pdf,.docx,.pptx,.xlsx,.xls,.html,.csv,.json,.xml,.ipynb,.epub,.zip,.png,.jpg,.jpeg,.webp" />
+                    <p class="mt-4 max-w-full truncate text-[18px] font-semibold text-navy" id="dzTitle">Drop files here</p>
+                    <p class="mt-1 text-[14px] text-[#7A6E5A]" id="dzSub">or click to choose them from your computer</p>
+                    <input type="file" id="fileInput" class="hidden" multiple accept=".pdf,.docx,.pptx,.xlsx,.xls,.html,.csv,.json,.xml,.ipynb,.epub,.zip,.png,.jpg,.jpeg,.webp" />
                   </div>
 
                   <form class="mt-4 flex gap-2" id="urlForm">
@@ -114,19 +114,25 @@
       <div id="result" class="reveal paper-2 relative mt-10" hidden>
         <div class="fold rounded-[4px] bg-white px-5 pb-6 pt-8 sm:px-10 sm:pb-8 sm:pt-10">
           <div class="flex flex-wrap items-center justify-between gap-4 pr-8">
-            <h2 class="text-[22px] font-bold tracking-[-0.02em]">Your Markdown</h2>
+            <h2 class="text-[22px] font-bold tracking-[-0.02em]" id="resultTitle">Your Markdown</h2>
             <div class="flex gap-1 rounded-full bg-paper p-1" role="tablist" aria-label="Output view">
               <button class="tab rounded-full px-4 py-1.5 text-[14px] font-semibold" role="tab" id="tabPreview" aria-selected="true" aria-controls="previewPane">Preview</button>
               <button class="tab rounded-full px-4 py-1.5 text-[14px] font-semibold" role="tab" id="tabSource" aria-selected="false" aria-controls="mdOutput">Markdown</button>
             </div>
           </div>
-          <div id="previewPane" class="md-preview mt-6 max-h-[600px] overflow-auto rounded-[4px] border border-rule px-6 py-5" role="tabpanel" aria-labelledby="tabPreview" tabindex="0"></div>
-          <textarea id="mdOutput" class="md-source mt-6 hidden h-[420px] w-full resize-y rounded-[4px] border border-rule bg-[#FCFBF8] p-5 text-[13px] leading-[1.7] text-navy sm:h-[600px]" role="tabpanel" aria-labelledby="tabSource" spellcheck="false"></textarea>
+          <div id="resultBody" class="mt-6 grid gap-6">
+            <ol id="batchList" class="batch-list hidden max-h-[320px] overflow-auto rounded-[4px] border border-rule p-1.5 lg:max-h-[600px]" aria-label="Your files"></ol>
+            <div class="min-w-0">
+              <div id="previewPane" class="md-preview max-h-[600px] overflow-auto rounded-[4px] border border-rule px-6 py-5" role="tabpanel" aria-labelledby="tabPreview" tabindex="0"></div>
+              <textarea id="mdOutput" class="md-source hidden h-[420px] w-full resize-y rounded-[4px] border border-rule bg-[#FCFBF8] p-5 text-[13px] leading-[1.7] text-navy sm:h-[600px]" role="tabpanel" aria-labelledby="tabSource" spellcheck="false"></textarea>
+            </div>
+          </div>
           <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
             <p class="font-mono text-[13px] text-muted" id="resultMeta"></p>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
               <button id="copyBtn" class="btn btn-ghost rounded-full px-5 py-2 text-[14px] font-semibold">Copy</button>
               <button id="downloadBtn" class="btn btn-primary rounded-full px-5 py-2 text-[14px] font-semibold">Download .md</button>
+              <button id="zipBtn" class="btn btn-primary hidden rounded-full px-5 py-2 text-[14px] font-semibold">Download all (.zip)</button>
             </div>
           </div>
         </div>

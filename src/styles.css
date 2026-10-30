@@ -68,6 +68,8 @@ body > * { position: relative; z-index: 1; }
 .btn-primary:not(:disabled):hover .chev { transform: translateX(3px); }
 .btn-ghost { box-shadow: inset 0 0 0 1.5px #122B40; color: #122B40; background: transparent; }
 .btn-ghost:hover { background: #122B40; color: #fff; }
+.btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-ghost:disabled:hover { background: transparent; color: #122B40; }
 .btn-ghost:focus-visible { box-shadow: inset 0 0 0 1.5px #122B40, 0 0 0 2px #fff, 0 0 0 4px #0EA5E9; }
 .link { outline: none; border-radius: 3px; text-underline-offset: 4px; transition: color 160ms ease, opacity 160ms ease; }
 .link:hover { color: #0E7490; text-decoration-line: underline; }
@@ -174,3 +176,19 @@ details[open] .plus { transform: rotate(45deg); }
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Batch file list */
+.batch-item { outline: none; transition: background-color 160ms ease, transform 200ms var(--spring); }
+.batch-item:not(:disabled) { cursor: pointer; }
+.batch-item:not(:disabled):hover { background-color: #F6F1E8; }
+.batch-item:not(:disabled):active { transform: scale(0.985); }
+.batch-item:focus-visible { box-shadow: inset 0 0 0 2px #0EA5E9; }
+.batch-item[aria-current="true"] { background-color: #F4EFE6; box-shadow: inset 3px 0 0 #0E7490; }
+.batch-item[aria-current="true"]:focus-visible { box-shadow: inset 3px 0 0 #0E7490, inset 0 0 0 2px #0EA5E9; }
+.batch-item .batch-note { color: #64748B; }
+.batch-item[data-state="waiting"] .batch-icon { color: #94A3B8; }
+.batch-item[data-state="converting"] .batch-icon { color: #0E7490; animation: spin 900ms linear infinite; }
+.batch-item[data-state="done"] .batch-icon { color: #0E7490; }
+.batch-item[data-state="failed"] .batch-icon, .batch-item[data-state="failed"] .batch-note { color: #9A3412; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .batch-item[data-state="converting"] .batch-icon { animation: none; } }

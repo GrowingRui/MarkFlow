@@ -42,6 +42,11 @@ export function limitMessage() {
     : `You’ve used today’s ${state.usage.limit} free conversions. Sign in to get 30 a day.`;
 }
 
+// Conversions left today, or Infinity when the server is unavailable and nothing is counted.
+export function conversionsLeft() {
+  return state ? Math.max(0, state.usage.limit - state.usage.used) : Infinity;
+}
+
 // Called after a successful conversion.
 export async function countConversion() {
   if (!state) return;
