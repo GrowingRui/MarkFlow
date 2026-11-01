@@ -127,6 +127,25 @@ line('Next steps', { size: 15, font: bold, gap: 1.8 });
 line('The board meets again in January.');
 write('report.pdf', await pdf.save({ useObjectStreams: false }));
 
+// PDF layout: a full-width title, two columns with a sentence that carries over, then a table
+const layout = await PDFDocument.create();
+layout.setCreationDate(date);
+layout.setModificationDate(date);
+const lRegular = await layout.embedFont(StandardFonts.Helvetica);
+const lBold = await layout.embedFont(StandardFonts.HelveticaBold);
+const lPage = layout.addPage([612, 792]);
+const text = (str, x, top, { size = 10, font = lRegular } = {}) => lPage.drawText(str, { x, y: top, size, font, color: ink });
+text('Field notes from the northern sites', 72, 720, { size: 20, font: lBold });
+const leftCol = ['The survey covered eleven sites along', 'the river and took most of the spring.', 'Water levels were lower than in any', 'year since records began, which'];
+const rightCol = ['changed where the teams could camp.', 'Most sites were reached on foot.', '', 'Two sites were skipped after a storm.'];
+leftCol.forEach((s, i) => text(s, 72, 680 - i * 14));
+rightCol.forEach((s, i) => s && text(s, 320, 680 - i * 14));
+text('Samples collected at each site', 72, 600, { size: 14, font: lBold });
+[['Site', 'Samples', 'Status'], ['North bend', '24', 'Done'], ['Mill pond', '18', 'Done'], ['East ford', '9', 'Partial']]
+  .forEach((row, i) => row.forEach((cell, j) => text(cell, [72, 260, 400][j], 570 - i * 16, { font: i ? lRegular : lBold })));
+text('All samples are stored at the field station until the autumn review.', 72, 490);
+write('layout.pdf', await layout.save({ useObjectStreams: false }));
+
 // EPUB
 const epub = new JSZip();
 epub.file('mimetype', 'application/epub+zip', { date, createFolders: false });
