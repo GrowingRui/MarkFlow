@@ -172,6 +172,26 @@ text('Samples collected at each site', 72, 600, { size: 14, font: lBold });
 text('All samples are stored at the field station until the autumn review.', 72, 490);
 write('layout.pdf', await layout.save({ useObjectStreams: false }));
 
+// PDF pages: a running header and "Page N of 3" footer on every page, and paragraphs that run over
+// page breaks (one mid-word, one mid-sentence) next to one that ends with its page
+const chapter = await PDFDocument.create();
+chapter.setCreationDate(date);
+chapter.setModificationDate(date);
+const cFont = await chapter.embedFont(StandardFonts.Helvetica);
+const pageText = [
+  ['The river survey began in March, when the first teams set out from the northern', 'station with enough supplies for three weeks and a plan to reach every site be-'],
+  ['fore the water rose. Most of them made it back on time.', 'The second season was shorter, and the teams worked closer to the station, which'],
+  ['meant less time on the road and more time at each site.', 'A third season is planned for next year.'],
+];
+pageText.forEach((lines, n) => {
+  const pg = chapter.addPage([612, 792]);
+  const t = (str, x, y) => pg.drawText(str, { x, y, size: 10, font: cFont, color: ink });
+  t('Field Guide - Chapter 2', 72, 760);
+  t(`Page ${n + 1} of 3`, 500, 30);
+  lines.forEach((str, i) => t(str, 72, 700 - i * 14 - (n === 0 ? 0 : i * 14)));
+});
+write('chapter.pdf', await chapter.save({ useObjectStreams: false }));
+
 // EPUB
 const epub = new JSZip();
 epub.file('mimetype', 'application/epub+zip', { date, createFolders: false });

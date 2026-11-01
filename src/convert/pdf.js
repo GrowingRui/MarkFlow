@@ -24,14 +24,46 @@ export async function pdfToMd(file, ctx) {
       ctx.progress(`Recognizing text on page ${n} of ${doc.numPages}…`);
       pages.push({ ocr: await ocr(canvas, ctx) });
     } else {
-      pages.push({ lines: pdfLayout(lines) });
+      const [, bottom, , top] = page.view;
+      pages.push({ lines, bottom, top });
     }
   }
+  dropRunningLines(pages.filter(p => p.lines));
+  for (const p of pages) if (p.lines) p.lines = pdfLayout(p.lines);
   // The most common font size (weighted by text length) is treated as body text.
   const weight = {};
   for (const p of pages) for (const l of p.lines || []) if (!l.table) weight[l.size] = (weight[l.size] || 0) + l.text.length;
   const body = +Object.entries(weight).sort((a, b) => b[1] - a[1])[0]?.[0] || 12;
-  return joinBlocks(pages.flatMap(p => p.ocr != null ? (p.ocr ? [p.ocr] : []) : pdfBlocks(p.lines, body)));
+  return joinBlocks(joinPages(pages.map(p => p.ocr != null ? (p.ocr ? [p.ocr] : []) : pdfBlocks(p.lines, body))));
+}
+
+// Removes running headers and footers: lines in the top or bottom 8% of the page whose text, with
+// numbers ignored, repeats on at least half the pages (and three or more), and lone page numbers there.
+export function dropRunningLines(pages) {
+  const margin = (p, l) => l.y > p.top - (p.top - p.bottom) * 0.08 || l.y < p.bottom + (p.top - p.bottom) * 0.08;
+  const key = l => l.text.replace(/\d+/g, '#').replace(/\s+/g, ' ').trim().toLowerCase();
+  const pageNumber = /^(page\s*)?#(\s*(of|\/)\s*#)?$|^[-–—]\s*#\s*[-–—]$/;
+  const counts = new Map();
+  for (const p of pages) for (const k of new Set(p.lines.filter(l => margin(p, l)).map(key))) counts.set(k, (counts.get(k) || 0) + 1);
+  const repeats = k => pages.length >= 3 && counts.get(k) >= Math.max(3, pages.length / 2);
+  for (const p of pages) p.lines = p.lines.filter(l => !(margin(p, l) && (repeats(key(l)) || (pages.length >= 2 && pageNumber.test(key(l))))));
+}
+
+// Joins a paragraph that runs over a page break: the last block of a page is a paragraph of some
+// length that doesn't end a sentence, and the next page starts with a paragraph.
+export function joinPages(pages) {
+  const plain = b => b && !/^(#|- |\d+\. |\||```)/.test(b) && !b.includes('\n');
+  const out = [];
+  for (const blocks of pages) {
+    const last = out[out.length - 1];
+    if (plain(last) && last.length > 40 && !/[.!?:;"”)]$/.test(last) && plain(blocks[0])) {
+      out[out.length - 1] = /[a-z]-$/.test(last) && /^[a-z]/.test(blocks[0]) ? last.slice(0, -1) + blocks[0] : last + ' ' + blocks[0];
+      out.push(...blocks.slice(1));
+    } else {
+      out.push(...blocks);
+    }
+  }
+  return out;
 }
 
 // Groups PDF.js text items into lines, top to bottom. Within a line, text separated by a gap of

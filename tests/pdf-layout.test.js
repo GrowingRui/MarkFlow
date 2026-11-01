@@ -1,6 +1,6 @@
 // pdfLines and pdfBlocks without PDF.js: text items are built by hand, so each layout rule is tested on its own.
 import { describe, expect, it } from 'vitest';
-import { pdfBlocks, pdfLayout, pdfLines } from '../src/convert/pdf.js';
+import { dropRunningLines, joinPages, pdfBlocks, pdfLayout, pdfLines } from '../src/convert/pdf.js';
 
 // A PDF.js text item. transform = [scaleX, skewY, skewX, scaleY, x, y]; y grows upwards.
 const item = (str, x, y, size = 10, width = str.length * size * 0.5) => ({ str, width, transform: [size, 0, 0, size, x, y] });
@@ -102,5 +102,40 @@ describe('pdfBlocks with layout', () => {
   it('writes tables as Markdown between paragraphs', () => {
     expect(pdfBlocks([...lines(['Before.']), { table: [['A', 'B'], ['1', '2']] }, ...lines(['After.', { y: 600 }])], 10))
       .toEqual(['Before.', '| A | B |\n| --- | --- |\n| 1 | 2 |', 'After.']);
+  });
+});
+
+describe('dropRunningLines', () => {
+  // A 792pt-tall page; each line is [text, y].
+  const pg = (...rows) => ({ bottom: 0, top: 792, lines: rows.map(([text, y]) => ({ text, y })) });
+  const texts = pages => pages.map(p => p.lines.map(l => l.text));
+
+  it('drops margin lines that repeat on most pages, ignoring page numbers', () => {
+    const pages = [1, 2, 3].map(n => pg(['Annual report 2026', 770], ['Body ' + n, 400], [`Page ${n} of 3`, 20]));
+    dropRunningLines(pages);
+    expect(texts(pages)).toEqual([['Body 1'], ['Body 2'], ['Body 3']]);
+  });
+  it('keeps text that repeats in the body, or in the margin of too few pages', () => {
+    const pages = [pg(['Draft', 770], ['Same line', 400]), pg(['Draft', 770], ['Same line', 400]), pg(['Chapter 1', 770], ['Same line', 400]), pg(['Other', 770])];
+    dropRunningLines(pages);
+    expect(texts(pages)).toEqual([['Draft', 'Same line'], ['Draft', 'Same line'], ['Chapter 1', 'Same line'], ['Other']]);
+  });
+  it('drops lone page numbers in the margin even on short documents', () => {
+    const pages = [pg(['Text', 400], ['1', 20]), pg(['- 2 -', 20], ['12 apples', 400])];
+    dropRunningLines(pages);
+    expect(texts(pages)).toEqual([['Text'], ['12 apples']]);
+  });
+});
+
+describe('joinPages', () => {
+  const long = 'A paragraph that is long enough to be body text and runs on';
+  it('joins a paragraph that runs over a page break, mending a split word', () => {
+    expect(joinPages([[long], ['to the next page.']])).toEqual([long + ' to the next page.']);
+    expect(joinPages([[long + ' be-'], ['fore it ends.', 'Next.']])).toEqual([long + ' before it ends.', 'Next.']);
+  });
+  it('keeps blocks apart after a finished sentence, a short line, or around headings, lists and tables', () => {
+    for (const [a, b] of [[long + '.', 'next'], ['Short label', 'next'], ['## ' + long, 'next'], ['- ' + long, 'next'], [long, '## Heading'], [long, '| a | b |']]) {
+      expect(joinPages([[a], [b]])).toEqual([a, b]);
+    }
   });
 });
