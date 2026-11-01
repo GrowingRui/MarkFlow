@@ -96,7 +96,33 @@ s.addText([{ text: 'Revenue up 14%', options: { bullet: true } }, { text: 'EU co
 s = pptx.addSlide();
 s.addTable([[{ text: 'Region' }, { text: 'Q3' }], [{ text: 'EU' }, { text: '1.6M' }]], { x: 0.5, y: 1, w: 6 });
 pptx.addSlide();
-write('deck.pptx', await rezip(await pptx.write({ outputType: 'nodebuffer' })));
+// Real placeholders from a master: body text is bulleted unless a paragraph turns its bullet off
+pptx.defineSlideMaster({
+  title: 'PLAIN',
+  objects: [
+    { placeholder: { options: { name: 'heading', type: 'title', x: 0.5, y: 0.3, w: 9, h: 0.8 }, text: '' } },
+    { placeholder: { options: { name: 'content', type: 'body', x: 0.5, y: 1.3, w: 9, h: 3 }, text: '' } },
+  ],
+});
+s = pptx.addSlide({ masterName: 'PLAIN' });
+s.addText('Risks', { placeholder: 'heading' });
+s.addText([{ text: 'Supplier delays', options: { breakLine: true } }, { text: 'Two plants affected', options: { indentLevel: 1, breakLine: true } }, { text: 'Mitigation is in the appendix.' }], { placeholder: 'content' });
+// Text boxes only: a title that is the largest text, a numbered list with a nested bullet, and a caption
+s = pptx.addSlide();
+s.addText('Small print at the top', { x: 0.5, y: 0.1, w: 9, h: 0.3, fontSize: 10 });
+s.addText('Plan for Q4', { x: 0.5, y: 0.5, w: 9, h: 0.8, fontSize: 28 });
+s.addText([
+  { text: 'Close the lease', options: { bullet: { type: 'number' } } },
+  { text: 'Notice by October', options: { bullet: true, indentLevel: 1 } },
+  { text: 'Hire support', options: { bullet: { type: 'number' } } },
+], { x: 0.5, y: 1.5, w: 9, h: 2 });
+s.addText('Figures are estimates.', { x: 0.5, y: 4, w: 9, h: 0.5, fontSize: 12 });
+// pptxgenjs writes <a:buNone/> on every unbulleted paragraph; PowerPoint leaves body placeholder
+// paragraphs without bullet settings so they inherit the layout's bullets. Do the same, except on the last one.
+const deck = await JSZip.loadAsync(await pptx.write({ outputType: 'nodebuffer' }));
+const slide5 = await deck.file('ppt/slides/slide5.xml').async('string');
+deck.file('ppt/slides/slide5.xml', slide5.replace(/<a:pPr([^>]*)><a:buNone\/><\/a:pPr>(?=<a:r>(?:(?!<\/a:p>).)*?(Supplier|Two plants))/g, '<a:pPr$1/>'));
+write('deck.pptx', await rezip(await deck.generateAsync({ type: 'nodebuffer' })));
 
 // PDF: a heading, body text with a hyphenated wrap, bullets with a wrapped item, a numbered list and a second page
 const pdf = await PDFDocument.create();
