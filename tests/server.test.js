@@ -1,6 +1,7 @@
 // @vitest-environment node
 // API handlers against an in-memory PGlite database (PGLITE_DIR=memory:// in vite.config.js).
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { query } from '../server/db.js';
 import { me, recordConversion, signin, signout, signup } from '../server/handlers.js';
 import { LIMITS } from '../server/plans.js';
 
@@ -29,6 +30,10 @@ function client() {
     convert: headers => call(recordConversion, 'POST', '/api/usage', undefined, headers),
   };
 }
+
+// Starting PGlite and running the migrations takes seconds when other test files share the CPU;
+// do it once up front so each test's timeout only covers the test.
+beforeAll(() => query('select 1'), 60_000);
 
 let emailCounter = 0;
 const newEmail = () => `person${++emailCounter}@example.com`;
