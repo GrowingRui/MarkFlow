@@ -17,7 +17,7 @@ export async function zipToMd(file, ctx) {
     ctx.progress(`Converting ${name} (${i + 1} of ${entries.length})…`);
     try {
       const inner = new File([await entry.async('blob')], name);
-      sections.push(`## ${entry.name}\n\n${await convertFile(inner, ctx)}`);
+      sections.push(`## File: ${entry.name}\n\n${await convertFile(inner, ctx)}`);
     } catch (err) {
       skipped.push(name);
     }

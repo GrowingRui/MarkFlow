@@ -10,9 +10,11 @@ export async function pptxToMd(file, ctx) {
   const slideNum = p => +p.match(/slide(\d+)\.xml$/)[1];
   const paths = Object.keys(zip.files).filter(p => /^ppt\/slides\/slide\d+\.xml$/.test(p)).sort((a, b) => slideNum(a) - slideNum(b));
   const out = [];
-  for (const [i, path] of paths.entries()) {
+  for (const path of paths) {
+    // A slide without a title gets no made-up heading, and an empty slide adds nothing.
     const { title, body } = slideToMd(parseXml(await zip.file(path).async('string')));
-    out.push(joinBlocks([`## ${title || `Slide ${i + 1}`}`, ...body]));
+    const blocks = title ? [`## ${title}`, ...body] : body;
+    if (blocks.length) out.push(joinBlocks(blocks));
   }
   return out.join('\n\n');
 }

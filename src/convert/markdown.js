@@ -5,9 +5,12 @@ export function fence(lang, text) {
   return `${ticks}${lang}\n${text.replace(/\n+$/, '')}\n${ticks}`;
 }
 
-export function mdTable(rows) {
-  rows = rows.filter(r => r.some(c => String(c).trim()));
-  if (!rows.length) return '';
+// Blank rows are dropped, or with keepBlankRows kept where they sit between rows with content.
+export function mdTable(rows, { keepBlankRows = false } = {}) {
+  const filled = r => r.some(c => String(c ?? '').trim());
+  if (keepBlankRows) rows = rows.slice(rows.findIndex(filled), rows.findLastIndex(filled) + 1);
+  else rows = rows.filter(filled);
+  if (!rows.some(filled)) return '';
   const width = Math.max(...rows.map(r => r.length));
   const cell = c => String(c ?? '').replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|').trim();
   const line = r => '| ' + Array.from({ length: width }, (_, i) => cell(r[i])).join(' | ') + ' |';

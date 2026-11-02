@@ -2,3 +2,5 @@
 tests/fixtures/** -text
 # Snapshots are compared to converter output, which uses LF.
 tests/__snapshots__/** text eol=lf
+# markitdown.online output, compared with the snapshots: LF like them.
+tests/reference/** text eol=lf

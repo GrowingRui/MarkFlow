@@ -8,13 +8,9 @@ Prepared for the board
   - EU contracts
 - Two new hires
 
-## Slide 3
-
 | Region | Q3 |
 | --- | --- |
 | EU | 1.6M |
-
-## Slide 4
 
 ## Risks
 

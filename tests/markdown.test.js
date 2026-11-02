@@ -21,6 +21,10 @@ describe('mdTable', () => {
     expect(mdTable([['', ' '], ['a', null]])).toBe('| a |  |\n| --- | --- |');
     expect(mdTable([[''], []])).toBe('');
   });
+  it('keeps blank rows between rows with content when asked, but not at the ends', () => {
+    expect(mdTable([[''], ['a'], [''], ['b'], ['']], { keepBlankRows: true })).toBe('| a |\n| --- |\n|  |\n| b |');
+    expect(mdTable([[''], []], { keepBlankRows: true })).toBe('');
+  });
 });
 
 describe('joinBlocks', () => {

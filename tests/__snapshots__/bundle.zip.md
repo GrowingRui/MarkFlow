@@ -1,16 +1,16 @@
-## notes/readme.html
+## File: notes/readme.html
 
 # Readme
 
 Hello.
 
-## data/people.csv
+## File: data/people.csv
 
 | Name | Role |
 | --- | --- |
 | Ada | Engineer |
 
-## data/settings.json
+## File: data/settings.json
 
 ```json
 {
