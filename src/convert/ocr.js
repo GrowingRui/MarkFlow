@@ -1,6 +1,6 @@
 // Text recognition for images and scanned PDF pages. The engine and English language data are
 // served from this site (see vite.config.js), so nothing is fetched from a CDN.
-import { createWorker, OEM } from 'tesseract.js';
+import { createWorker, OEM, PSM } from 'tesseract.js';
 import { joinBlocks } from './markdown.js';
 
 const asset = path => new URL(import.meta.env.BASE_URL + path, location.href).href;
@@ -14,6 +14,9 @@ export async function ocr(image, ctx) {
       corePath: asset('tesseract/core'),
       langPath: asset('tesseract/lang'),
     });
+    // Tesseract.js reads a page as one block of text unless told otherwise, which runs paragraphs
+    // together and can drop large headings; automatic layout finds the page's separate blocks.
+    await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
   }
   const { data } = await worker.recognize(image, {}, { text: true, blocks: true });
   return data.blocks?.length ? ocrBlocksToMd(data.blocks) : ocrTextToMd(data.text);

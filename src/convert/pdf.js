@@ -43,7 +43,7 @@ export async function pdfToMd(file, ctx) {
   for (const p of pages) if (p.lines) p.lines = pdfLayout(p.lines);
   // The most common font size (weighted by text length) is treated as body text.
   const weight = {};
-  for (const p of pages) for (const l of p.lines || []) if (!l.table) weight[l.size] = (weight[l.size] || 0) + l.text.length;
+  for (const p of pages) for (const l of p.lines || []) weight[l.size] = (weight[l.size] || 0) + (l.table ? l.chars : l.text.length);
   const body = +Object.entries(weight).sort((a, b) => b[1] - a[1])[0]?.[0] || 12;
   const levels = headingLevels(pages.flatMap(p => p.lines || []), body);
   const blocks = joinPages(pages.map(p => p.ocr != null ? (p.ocr ? [p.ocr] : []) : pdfBlocks(p.lines, body, levels)));
@@ -214,9 +214,66 @@ const makeLine = (segs, { y, size }) => ({
 });
 
 // Puts lines in reading order: multi-column text is read column by column, and rows of short cells
-// lined up under shared gaps become { table } entries. Full-width lines (titles, figures spanning
-// the columns) split the page into bands that are handled one after another.
+// lined up under shared gaps become { table } entries. Tables of three or more columns are found
+// first, since their rows can run through a gap that other lines leave between columns, which would
+// otherwise cut them apart.
 export function pdfLayout(lines, depth = 0) {
+  const out = [];
+  let rest = [];
+  const flushRest = () => { if (rest.length) out.push(...columnLayout(rest, depth)); rest = []; };
+  for (let i = 0; i < lines.length; i++) {
+    const end = wideTableEnd(lines, i);
+    if (end > i) {
+      // Rows just above that line up with the table belong to it too, such as a first row with
+      // only two cells filled in.
+      // A header row, often centred over its columns and wrapping onto a second line, is pulled in
+      // as long as its cells overlap the table's columns.
+      const rows = lines.slice(i, end + 1);
+      let above = rest.length;
+      while (above > 0 && rest[above - 1].y - (above < rest.length ? rest[above] : rows[0]).y < rows[0].size * 3) {
+        const line = rest[above - 1];
+        if (cellRow(line) && linesUp(line, rows, true)) rows.unshift(...rest.splice(above - 1));
+        else if (line.segs.length > 2 || line.x <= rows[0].segs[0].end) break;
+        above--;
+      }
+      flushRest();
+      out.push(tableEntry(rows, lines[i].size));
+      i = end;
+    } else rest.push(lines[i]);
+  }
+  flushRest();
+  return out;
+}
+
+// A row of a wide table: two or more cells, none longer than a few words' worth or ending in a
+// hyphenated break, which is how three narrow columns of prose differ from a table.
+const cellRow = l => l.segs.length >= 2 && shortCells(l.segs) && l.segs.every(s => s.text.trim().length <= 35 && !/[a-z]-$/.test(s.text.trim()));
+// At least two of the line's cells start or end where cells of the table's rows do (or, for a header,
+// overlap them).
+const linesUp = (line, rows, overlap = false) => line.segs.filter(s => rows.some(r => r.segs.some(t =>
+  Math.abs(t.x - s.x) < line.size || Math.abs(t.end - s.end) < line.size || (overlap && s.x < t.end && s.end > t.x)))).length >= 2;
+
+// The last line of a table of three or more columns starting at lines[i] (i itself when none does):
+// further rows lining up with the table's columns, and lines of a cell that wraps (text starting past
+// the first column). It needs at least three rows.
+function wideTableEnd(lines, i) {
+  const head = lines[i];
+  if (head.segs.length < 3 || !cellRow(head)) return i;
+  const rows = [head];
+  let j = i;
+  while (j + 1 < lines.length) {
+    const next = lines[j + 1];
+    if (lines[j].y - next.y > Math.max(lines[j].size, next.size) * 3 || lines[j].y < next.y) break;
+    if (cellRow(next) && linesUp(next, rows)) rows.push(next);
+    else if (!(next.x > head.segs[0].end && next.segs.length <= 2 && next.segs.every(s => s.text.trim().length <= 60))) break;
+    j++;
+  }
+  return rows.length >= 3 ? j : i;
+}
+
+// Lines in reading order across columns (see pdfLayout), once wide tables are out of the way. Full-
+// width lines (titles, figures spanning the columns) split the page into bands handled one by one.
+function columnLayout(lines, depth) {
   const gutter = depth < 8 && findGutter(lines);
   if (!gutter) return lines;
   const out = [];
@@ -238,6 +295,15 @@ export function pdfLayout(lines, depth = 0) {
 }
 
 const median = xs => [...xs].sort((a, b) => a - b)[xs.length >> 1];
+// Table cells are short (the true median, so a short label beside a longer value counts), and none
+// is a run of prose (a column of text beside a figure's labels).
+const shortCells = segs => {
+  const lengths = segs.map(s => s.text.trim().length);
+  if (Math.max(...lengths) > 45) return false;
+  // A label and its value, as in a form: "Name:" beside "Universal Studios Distribution".
+  if (segs.length === 2 && /:$/.test(segs[0].text.trim()) && lengths[0] <= 30) return true;
+  return median(lengths) <= 25;
+};
 const crosses = (line, { x, em }) => line.segs.some(s => s.x < x + em / 2 && s.end > x - em / 2);
 
 // The x position with the most lines clear of it on both sides, needing at least one character
@@ -270,7 +336,7 @@ function splitRun(run, gutter, depth) {
   while (i < run.length) {
     const end = tableEnd(run, i);
     if (end > i) {
-      out.push({ table: tableRows(run.slice(i, end + 1), gutter.em) });
+      out.push(tableEntry(run.slice(i, end + 1), gutter.em));
       i = end + 1;
       continue;
     }
@@ -285,13 +351,14 @@ function splitRun(run, gutter, depth) {
 // The last row of a table starting at run[i] (i itself when none does): rows of two or more short
 // segments, plus rows of short text that leave the first column empty (a cell wrapping onto a second line).
 function tableEnd(run, i) {
-  // Cells are short, and none is a run of prose (a column of text beside a figure's labels).
-  const short = segs => median(segs.map(s => s.text.trim().length)) <= 25 && segs.every(s => s.text.trim().length <= 45);
-  if (run[i].segs.length < 2 || !short(run[i].segs)) return i;
+  if (run[i].segs.length < 2 || !shortCells(run[i].segs)) return i;
   const firstCol = run[i].segs[0].end;
-  let j = i;
-  while (j + 1 < run.length && short(run[j + 1].segs) && (run[j + 1].segs.length >= 2 || run[j + 1].x > firstCol)) j++;
-  return j;
+  let j = i, rows = 1;
+  while (j + 1 < run.length && shortCells(run[j + 1].segs) && (run[j + 1].segs.length >= 2 || run[j + 1].x > firstCol)) {
+    if (run[++j].segs.length >= 2) rows++;
+  }
+  // One row with cells and lines under it is a line beside a note, such as a title and a date.
+  return rows >= 2 ? j : i;
 }
 
 function columns(piece, gutter, depth) {
@@ -304,11 +371,19 @@ function columns(piece, gutter, depth) {
   return left.length < 2 || right.length < 2 ? piece : [...pdfLayout(left, depth + 1), ...pdfLayout(right, depth + 1)];
 }
 
-// Columns are the x ranges covered by text in the band; each segment goes in the column it overlaps.
-// A row with an empty first cell continues the cells of the row above (text wrapped inside a cell).
+// A table built from lines, keeping their usual size and amount of text, which count towards the
+// document's body text size like any other text.
+const tableEntry = (lines, em) => ({
+  table: tableRows(lines, em), size: median(lines.map(l => l.size)), chars: lines.reduce((sum, l) => sum + l.text.length, 0),
+});
+
+// Columns are the x ranges covered by the cells of rows with two or more (a lone line of wrapped text
+// can be wider than its column); each segment goes in the column it overlaps, or else the one it
+// starts in. A row with an empty first cell continues the cells of the row above (text wrapped in a cell).
 function tableRows(run, em) {
   const cols = [];
-  for (const s of run.flatMap(l => l.segs).sort((a, b) => a.x - b.x)) {
+  const rowsWithCells = run.filter(l => l.segs.length >= 2);
+  for (const s of (rowsWithCells.length ? rowsWithCells : run).flatMap(l => l.segs).sort((a, b) => a.x - b.x)) {
     const col = cols[cols.length - 1];
     if (col && s.x < col.end + em / 2) col.end = Math.max(col.end, s.end);
     else cols.push({ x: s.x, end: s.end });
@@ -317,7 +392,8 @@ function tableRows(run, em) {
   for (const line of run) {
     const cells = cols.map(() => '');
     for (const s of line.segs) {
-      const i = cols.findIndex(c => s.x < c.end && s.end > c.x);
+      let i = cols.findIndex(c => s.x < c.end && s.end > c.x);
+      if (i < 0) i = Math.max(0, cols.findLastIndex(c => c.x <= s.x));
       cells[i] = (cells[i] + ' ' + s.md.trim()).trim();
     }
     const prev = rows[rows.length - 1];
@@ -411,7 +487,13 @@ export function pdfBlocks(lines, body, levels = headingLevels(lines, body)) {
   for (const line of lines) {
     if (line.table) {
       flush();
-      blocks.push(mdTable(line.table));
+      // A form's two columns of labels and values reads better as "Label: value" lines than as a
+      // table whose first row would pose as a header.
+      const rows = line.table;
+      const form = rows.length >= 2 && rows.every(r => r.length === 2 && /:$/.test(plainText(r[0]).trim()));
+      // When the cells all fell into one column there is no table to show, just its lines.
+      if (rows.every(r => r.length === 1)) blocks.push(...rows.map(r => r[0]).filter(Boolean));
+      else blocks.push(...(form ? rows.map(([label, value]) => `${plainText(label)} ${value}`.trim()) : [mdTable(rows)]));
       prev = itemX = null;
       continue;
     }

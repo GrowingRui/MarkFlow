@@ -280,6 +280,36 @@ rLine('Thank you for visiting!', 20, 298);
 rPage.drawText('COPY - NOT A TAX INVOICE', { x: 290, y: 60, size: 8, font: mono, color: ink, rotate: degrees(90) });
 write('receipt.pdf', await receipt.save({ useObjectStreams: false }));
 
+// PDF form: a title with a date beside it, label/value pairs in two columns and in one column (values
+// longer than their labels), and a wide schedule whose rows cross the gap between the label and value
+// columns, with a note under each title that runs wider than its column
+const form = await PDFDocument.create();
+form.setCreationDate(date);
+form.setModificationDate(date);
+const fRegular = await form.embedFont(StandardFonts.Helvetica);
+const fBold = await form.embedFont(StandardFonts.HelveticaBold);
+const fPage = form.addPage([612, 792]);
+const fText = (str, x, y, size = 8, font = fRegular) => fPage.drawText(str, { x, y, size, font, color: ink });
+fText('BOOKING ORDER', 50, 740, 16, fBold);
+fText('Print Date 12/15/2024', 470, 740);
+fText('Orders', 50, 700, 10, fBold);
+[['Order / Rev:', '2024-12-5678', 'Cinema:', 'Downtown Multiplex'], ['Alt Order #:', 'SC-WINTER-2024', 'Location:', 'NYC-01'], ['Order Type:', 'Premium Package', 'Region:', 'NORTHEAST']]
+  .forEach((row, i) => row.forEach((cell, j) => fText(cell, [50, 150, 350, 450][j], 685 - i * 12)));
+fText('Customer', 50, 630, 10, fBold);
+[['Name:', 'Universal Studios Distribution'], ['Category:', 'Film Distributor'], ['Contact Email:', 'bookings@universalstudios.com']]
+  .forEach(([label, value], i) => { fText(label, 50, 615 - i * 12); fText(value, 150, 615 - i * 12); });
+fText('Show Schedule', 50, 560, 10, fBold);
+const cols = [50, 70, 100, 140, 180, 260, 300, 350];
+['Ln', 'Screen', 'Start', 'End', 'Movie Title', 'Format', 'Showtime', 'Total'].forEach((h, j) => fText(h, cols[j], 545, 7));
+[['1', 'SCR-1', '12/20/24', '12/25/24', 'Holiday Spectacular', 'IMAX 3D', '7:00 PM', '$3,000', '(Runtime: 142 min); Holiday Season Premium'],
+  ['2', 'SCR-2', '12/20/24', '12/31/24', 'Winter Wonderland', 'Standard', '4:30 PM', '$3,600', '(Runtime: 98 min); Matinee Special']]
+  .forEach((row, i) => {
+    row.slice(0, 8).forEach((cell, j) => fText(cell, cols[j], 533 - i * 22, 7));
+    fText(row[8], 180, 524 - i * 22, 6);
+  });
+fText('All showtimes are approximate and subject to change.', 50, 470);
+write('form.pdf', await form.save({ useObjectStreams: false }));
+
 // CSV saved by a Chinese version of Excel, in GBK rather than UTF-8:
 // 姓名,城市 / 张伟,北京 / 李娜,上海
 write('chinese-gbk.csv', Buffer.from('d0d5c3fb2cb3c7cad00ad5c5ceb02cb1b1bea90ac0eec4c82cc9cfbaa30a', 'hex'));
@@ -339,7 +369,8 @@ console.log(`Fixtures written to ${dir}`);
 
 // docx and pptxgenjs stamp the current time into their zip entries and document properties;
 // repack with a fixed date so regenerating doesn't change the files. (The docx library still gives
-// hyperlinks a random relationship id, so guide.docx differs between runs; its text doesn't.)
+// hyperlinks a random relationship id, so guide.docx differs between runs, and pptxgenjs does the same
+// for charts.pptx; their text doesn't.)
 async function rezip(buffer) {
   const src = await JSZip.loadAsync(buffer);
   const out = new JSZip();
