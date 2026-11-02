@@ -40,7 +40,7 @@ Text recognition uses Tesseract.js with English data. `vite.config.js` copies th
 
 ## Accounts and limits
 
-Without an account you get 3 conversions a day; a free account gets 30 (see `server/plans.js`). Conversion runs in the browser, so the server only counts finished conversions and the page enforces the limit. Without the API (a plain static host), the page hides sign-in and converts without limits.
+Without an account you get 5 conversions a day; a free account gets 30 (see `server/plans.js`). Conversion runs in the browser, so the server only counts finished conversions and the page enforces the limit. Without the API (a plain static host), the page hides sign-in and converts without limits.
 
 | Route | What it does |
 | --- | --- |

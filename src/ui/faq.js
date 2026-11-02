@@ -10,7 +10,7 @@ const FAQS = [
   ['Why should I convert Office documents to Markdown?', 'Markdown is portable, easy to version in Git, and readable by both people and AI tools, unlike app-specific formats.'],
   ['Can I batch convert multiple files?', 'Yes. Drop several files at once, or a ZIP file. They convert one after another in your browser, and you can download all the Markdown files together as a ZIP. Each file counts as one of your daily conversions.'],
   ['Which Markdown flavor does MarkFlow output?', 'MarkFlow outputs GitHub-flavored Markdown, which works in most editors, documentation tools, and Git hosts.'],
-  ['Do I need an account to use MarkFlow?', 'No. You can convert 3 files a day without an account. A free account raises that to 30 a day, and your files still never leave your browser.', 'faq-account'],
+  ['Do I need an account to use MarkFlow?', 'No. You can convert 5 files a day without an account. A free account raises that to 30 a day, and your files still never leave your browser.', 'faq-account'],
   ['What should I do after converting a file?', 'Review the preview, download the .md file, and add it to your docs, repository, knowledge base, or AI workflow.'],
 ];
 
