@@ -4,9 +4,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
-import { Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, ExternalHyperlink } from 'docx';
+import { Document, ExternalHyperlink, HeadingLevel, Math as MathEq, MathFraction, MathRadical, MathRun, MathSuperScript, Packer, Paragraph, Table, TableCell, TableRow, TextRun } from 'docx';
 import PptxGenJS from 'pptxgenjs';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib';
 
 const dir = join(import.meta.dirname, '..', 'tests', 'fixtures');
 mkdirSync(dir, { recursive: true });
@@ -85,6 +85,26 @@ const docx = new Document({
 });
 write('guide.docx', await rezip(await Packer.toBuffer(docx)));
 
+// Word with a Title above Heading 1 sections, and equations: inline, with a fraction, a power and a root
+const paper = new Document({
+  creator: 'MarkFlow', title: 'Optics', description: 'fixture',
+  sections: [{
+    children: [
+      new Paragraph({ text: 'Diffraction notes', heading: HeadingLevel.TITLE }),
+      new Paragraph({ text: 'Single slit', heading: HeadingLevel.HEADING_1 }),
+      new Paragraph({ children: [new TextRun('For '), new MathEq({ children: [new MathRun('m=1')] }), new TextRun(', the first minimum is at')] }),
+      new Paragraph({ children: [new MathEq({ children: [
+        new MathRun('sin θ='),
+        new MathFraction({ numerator: [new MathRun('mλ')], denominator: [new MathRun('a')] }),
+        new MathRun('≈'),
+        new MathSuperScript({ children: [new MathRun('10')], superScript: [new MathRun('-4')] }),
+      ] })] }),
+      new Paragraph({ children: [new TextRun('The width scales with '), new MathEq({ children: [new MathRadical({ children: [new MathRun('L')] })] }), new TextRun('.')] }),
+    ],
+  }],
+});
+write('paper.docx', await rezip(await Packer.toBuffer(paper)));
+
 // PowerPoint
 const pptx = new PptxGenJS();
 let s = pptx.addSlide();
@@ -123,6 +143,20 @@ const deck = await JSZip.loadAsync(await pptx.write({ outputType: 'nodebuffer' }
 const slide5 = await deck.file('ppt/slides/slide5.xml').async('string');
 deck.file('ppt/slides/slide5.xml', slide5.replace(/<a:pPr([^>]*)><a:buNone\/><\/a:pPr>(?=<a:r>(?:(?!<\/a:p>).)*?(Supplier|Two plants))/g, '<a:pPr$1/>'));
 write('deck.pptx', await rezip(await deck.generateAsync({ type: 'nodebuffer' })));
+
+// PowerPoint with a chart (two series), speaker notes, and a picture with a description
+const charted = new PptxGenJS();
+let c = charted.addSlide();
+c.addText('Visitors', { placeholder: 'title', x: 0.5, y: 0.3, w: 9, h: 0.8, fontSize: 28 });
+c.addChart(charted.ChartType.bar, [
+  { name: 'Adults', labels: ['Jan', 'Feb', 'Mar'], values: [120, 95, 140] },
+  { name: 'Children', labels: ['Jan', 'Feb', 'Mar'], values: [40, 30, 55] },
+], { x: 0.5, y: 1.2, w: 6, h: 3.5, showTitle: true, title: 'Visitors by month' });
+c.addNotes('Mention the dip in February.');
+c = charted.addSlide();
+c.addText('Site map', { x: 0.5, y: 0.3, w: 9, h: 0.8, fontSize: 28 });
+c.addImage({ data: 'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', x: 0.5, y: 1.2, w: 2, h: 2, altText: 'Map of the harbour with the visitor centre marked' });
+write('charts.pptx', await rezip(await charted.write({ outputType: 'nodebuffer' })));
 
 // PDF: a heading, body text with a hyphenated wrap, bullets with a wrapped item, a numbered list and a second page
 const pdf = await PDFDocument.create();
@@ -217,6 +251,68 @@ put('[SIGNING OFF]', 400, 438, eBold);
 put('[Your name]', 85, 414);
 put('Attach your CV as a PDF.', 85, 366, eItalic);
 write('letter.pdf', await letter.save({ useObjectStreams: false }));
+
+// PDF short lines: a receipt in Courier with a centred address, label lines, ===== dividers, a wrapped
+// item name that runs to the edge, a numbered item wrapping without an indent, a contents line with
+// dot leaders, and a sideways stamp in the margin
+const receipt = await PDFDocument.create();
+receipt.setCreationDate(date);
+receipt.setModificationDate(date);
+const mono = await receipt.embedFont(StandardFonts.Courier);
+const monoBold = await receipt.embedFont(StandardFonts.CourierBold);
+const rPage = receipt.addPage([300, 520]);
+const rLine = (str, x, y, font = mono, size = 9) => rPage.drawText(str, { x, y, size, font, color: ink });
+const centre = (str, y, font = mono, size = 9) => rLine(str, (300 - font.widthOfTextAtSize(str, size)) / 2, y, font, size);
+centre('CORNER BOOKS', 480, monoBold, 12);
+centre('12 Harbour Street', 464);
+centre('Bristol BS1 4QA', 453);
+rLine('=========================================', 20, 438);
+rLine('Order: ORD-2041', 20, 424);
+rLine('Cashier: Priya', 20, 413);
+rLine('=========================================', 20, 399);
+rLine('Field Guide to Coastal Birds and Their', 20, 385);
+rLine('Habitats', 20, 374);
+rLine('1 @ 18.50', 20, 363);
+rLine('1. Keep this receipt for returns within', 20, 345);
+rLine('thirty days of purchase.', 20, 334);
+rLine('Contents . . . . . . . . . . . . . . . . 2', 20, 316);
+rLine('Thank you for visiting!', 20, 298);
+rPage.drawText('COPY - NOT A TAX INVOICE', { x: 290, y: 60, size: 8, font: mono, color: ink, rotate: degrees(90) });
+write('receipt.pdf', await receipt.save({ useObjectStreams: false }));
+
+// CSV saved by a Chinese version of Excel, in GBK rather than UTF-8:
+// 姓名,城市 / 张伟,北京 / 李娜,上海
+write('chinese-gbk.csv', Buffer.from('d0d5c3fb2cb3c7cad00ad5c5ceb02cb1b1bea90ac0eec4c82cc9cfbaa30a', 'hex'));
+
+// A web page saved from a site: menus outside <main>, navigation inside it, links relative to the
+// canonical address, and a link that only runs a script
+write('article.html', `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Tide tables</title><link rel="canonical" href="https://example.com/guides/tides"></head>
+<body>
+<header><nav><a href="/">Home</a> <a href="/guides">Guides</a></nav></header>
+<main>
+<nav class="breadcrumbs"><a href="/guides">Guides</a> › Tides</nav>
+<h1>Reading tide tables</h1>
+<p>High water comes about twice a day. See <a href="moon">how the moon matters</a> or <a href="javascript:void(0)">print this page</a>.</p>
+<img src="/img/chart.png" alt="Tide chart">
+</main>
+<footer>© Example Guides</footer>
+</body></html>
+`);
+
+// News feeds: RSS with HTML descriptions, and Atom with an entry's link given as an attribute
+write('news.xml', `<?xml version="1.0"?>
+<rss version="2.0"><channel><title>Harbour News</title><description>Updates from the harbour office</description>
+<item><title>New mooring fees</title><link>https://example.com/fees</link><pubDate>Mon, 05 Jan 2026 09:00:00 +0000</pubDate>
+<description>&lt;p&gt;Fees rise by &lt;strong&gt;4%&lt;/strong&gt; from March.&lt;/p&gt;</description></item>
+<item><title>Dredging finished</title><description>The east channel is open again.</description></item>
+</channel></rss>
+`);
+write('updates.atom.xml', `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Lighthouse log</title>
+<entry><title>Lamp replaced</title><link href="https://example.com/lamp" rel="alternate"/><updated>2026-01-02T10:00:00Z</updated><summary>The new lamp is brighter.</summary></entry>
+</feed>
+`);
 
 // EPUB
 const epub = new JSZip();

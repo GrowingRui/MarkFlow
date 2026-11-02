@@ -17,7 +17,9 @@ export async function pdfToMd(file, ctx) {
     const chars = items.reduce((sum, it) => sum + it.str.trim().length, 0);
     if (ctx.ocrMode === 'Always' || (ctx.ocrMode === 'Auto' && chars < 20)) {
       const { ocr } = await loadModule(import('./ocr.js'));
-      const viewport = page.getViewport({ scale: 2 });
+      // About 300 DPI, the resolution OCR reads small print best at, with large pages capped at 4000 pixels.
+      const [width, height] = [page.view[2] - page.view[0], page.view[3] - page.view[1]];
+      const viewport = page.getViewport({ scale: Math.min(4, 4000 / Math.max(width, height)) });
       const canvas = document.createElement('canvas');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
@@ -61,12 +63,21 @@ async function fontStyles(page, items) {
   for (const id of new Set(items.map(it => it.fontName))) {
     const font = await Promise.race([new Promise(done => page.commonObjs.get(id, done)), new Promise(done => setTimeout(done, 1000))]);
     const name = typeof font?.name === 'string' ? font.name.replace(/^[A-Z]{6}\+/, '') : '';
-    styles[id] = {
-      bold: !!(font?.bold || font?.black) || /bold|black|heavy|semibold|demi/i.test(name),
-      italic: !!font?.italic || /italic|oblique/i.test(name),
-    };
+    const named = fontStyle(name);
+    styles[id] = { bold: !!(font?.bold || font?.black) || named.bold, italic: !!font?.italic || named.italic };
   }
   return styles;
+}
+
+// Reads the style from a font name. The style is usually the part after a hyphen or comma
+// ("Calibri-BoldItalic", "NimbusRomNo9L-Medi", "HelveticaNeueLTStd-BdIt", "Arial,Bold"); TeX's
+// Computer Modern fonts encode it in the family instead (CMBX10 is bold, CMTI10 italic).
+export function fontStyle(name) {
+  const style = name.includes('-') || name.includes(',') ? name.slice(name.search(/[-,]/) + 1) : '';
+  return {
+    bold: /bold|black|heavy|demi|medi|^bd|bd(it)?$|blk|^bl$/i.test(style) || /bold|^cmbx|^cmb\d/i.test(name),
+    italic: /ital|obli|^it$|it$/i.test(style) || /italic|oblique|^cmti|^cmsl/i.test(name),
+  };
 }
 
 // Emphasis travels through the layout code as private-use characters around each styled text item,
@@ -148,14 +159,23 @@ export function joinPages(pages) {
 // Each segment and line also keeps an `md` copy of its text with the emphasis marks from `styles`.
 export function pdfLines(items, styles = {}) {
   const rows = [];
+  // Sideways text (such as the arXiv stamp in the margin) is left out, unless most of the page is sideways.
+  const sideways = it => Math.abs(it.transform[1]) > Math.abs(it.transform[0]) * 0.05 || Math.abs(it.transform[2]) > Math.abs(it.transform[3]) * 0.05;
+  const length = list => list.reduce((sum, it) => sum + it.str.length, 0);
+  const upright = items.filter(it => !sideways(it));
+  if (length(upright) >= length(items) / 2) items = upright;
   const sorted = items.filter(it => it.str).map(it => ({
     str: it.str, fontName: it.fontName, x: it.transform[4], y: it.transform[5], w: it.width,
     size: Math.round(Math.hypot(it.transform[2], it.transform[3]) * 2) / 2,
   })).sort((a, b) => b.y - a.y || a.x - b.x);
   for (const it of sorted) {
     const row = rows[rows.length - 1];
-    if (row && Math.abs(row.y - it.y) < Math.max(row.size, it.size) * 0.5) {
+    // Measured against the smaller text, so a big title doesn't swallow small lines beside it,
+    // while a raised footnote mark still joins its line.
+    if (row && Math.abs(row.y - it.y) < Math.min(row.size, it.size) * 0.6) {
       row.items.push(it);
+      // The line sits on the baseline of its largest text, not on a raised footnote mark.
+      if (it.size >= row.size * 1.25) row.y = it.y;
       row.size = Math.max(row.size, it.size);
     } else {
       rows.push({ y: it.y, size: it.size, items: [it] });
@@ -177,8 +197,9 @@ export function pdfLines(items, styles = {}) {
         seg.text += it.str;
         seg.md += md;
         seg.end = Math.max(seg.end, it.x + it.w);
+        seg.size = Math.max(seg.size, it.size);
       } else {
-        segs.push({ text: it.str, md, x: it.x, end: it.x + it.w });
+        segs.push({ text: it.str, md, x: it.x, end: it.x + it.w, size: it.size });
       }
     }
     return segs.length ? makeLine(segs, row) : null;
@@ -186,8 +207,10 @@ export function pdfLines(items, styles = {}) {
 }
 
 const MARKER = /^([•●▪◦‣∙○■□➢►–-]|\d{1,3}[.)])$/;
+// A line's size is that of its own segments, so a column's line isn't sized by text beside it.
 const makeLine = (segs, { y, size }) => ({
-  text: segs.map(s => s.text.trim()).join(' '), md: segs.map(s => s.md.trim()).join(' '), x: segs[0].x, y, size, end: segs[segs.length - 1].end, segs,
+  text: segs.map(s => s.text.trim()).join(' '), md: segs.map(s => s.md.trim()).join(' '), x: segs[0].x, y,
+  size: Math.max(...segs.map(s => s.size ?? 0)) || size, end: segs[segs.length - 1].end, segs,
 });
 
 // Puts lines in reading order: multi-column text is read column by column, and rows of short cells
@@ -262,7 +285,8 @@ function splitRun(run, gutter, depth) {
 // The last row of a table starting at run[i] (i itself when none does): rows of two or more short
 // segments, plus rows of short text that leave the first column empty (a cell wrapping onto a second line).
 function tableEnd(run, i) {
-  const short = segs => median(segs.map(s => s.text.trim().length)) <= 25;
+  // Cells are short, and none is a run of prose (a column of text beside a figure's labels).
+  const short = segs => median(segs.map(s => s.text.trim().length)) <= 25 && segs.every(s => s.text.trim().length <= 45);
   if (run[i].segs.length < 2 || !short(run[i].segs)) return i;
   const firstCol = run[i].segs[0].end;
   let j = i;
@@ -310,14 +334,80 @@ const dropChars = (md, n) => md.replace(/[^\uE000-\uE003]/g, c => n-- > 0 ? '' :
 // Removes the hyphen at the end of a line, which may be followed by emphasis marks.
 const unhyphen = md => md.replace(/-([\uE000-\uE003]*)$/, '$1');
 
+// A line drawn with one repeated character, such as ===== or -----, used as a divider.
+const RULE = /^([=\-_~*.·])(\s?\1){4,}$/;
+// Runs of dots leading to a page number, as in a table of contents.
+const LEADER = /(\s?\.){4,}\s?/g;
+// Dividers stuck to text, as in "_______Page 1".
+const stripRules = s => s.replace(/^([=_])\1{4,}\s*|\s*([=_])\2{4,}$/g, '');
+
+// The usual distance between neighbouring lines of body text, so paragraph gaps can be told from
+// ordinary line spacing whatever the document's spacing is.
+function linePitch(lines, body) {
+  const gaps = [];
+  for (let i = 1; i < lines.length; i++) {
+    const [a, b] = [lines[i - 1], lines[i]];
+    if (a.table || b.table || Math.abs(a.size - body) > 0.6 || Math.abs(b.size - body) > 0.6) continue;
+    if (a.y - b.y > body * 0.8 && a.y - b.y < body * 2.5) gaps.push(a.y - b.y);
+  }
+  // The lower quartile, since a page of short paragraphs can have more paragraph gaps than line gaps.
+  return gaps.length >= 3 ? gaps.sort((a, b) => a - b)[gaps.length >> 2] : body * 1.2;
+}
+
+// Groups lines into blocks: neighbouring lines in reading order that start at the same place in the
+// same size (dividers such as ===== join whatever their size), with no big gap between them. For each
+// line it gives the block's right edge, and whether the block is prose. In prose most lines that run
+// on to the next one reach the edge; in receipts, forms and lists of names they stop short.
+function textBlocks(lines, pitch) {
+  const info = new Map();
+  let block = [];
+  const close = () => {
+    const edge = Math.max(...block.map(l => l.end));
+    const left = Math.min(...block.map(l => l.x));
+    const runOn = block.filter((l, i) => i < block.length - 1 && !RULE.test(l.text.trim()) && l.y - block[i + 1].y <= pitch * 1.3);
+    const full = runOn.filter(l => edge - l.end < (edge - left) * 0.15);
+    const meta = { edge, prose: runOn.length < 2 || full.length >= runOn.length / 2 };
+    for (const l of block) info.set(l, meta);
+    block = [];
+  };
+  for (const line of lines) {
+    if (line.table) { if (block.length) close(); continue; }
+    const last = block[block.length - 1];
+    const sameSize = last && (Math.abs(last.size - line.size) < 1 || RULE.test(last.text.trim()) || RULE.test(line.text.trim()));
+    if (last && !(sameSize && Math.abs(last.x - line.x) < line.size * 2 && last.y - line.y > 0 && last.y - line.y < pitch * 2.5)) close();
+    block.push(line);
+  }
+  if (block.length) close();
+  return info;
+}
+
 // Turns lines into Markdown blocks: headings by font size relative to body text, lists, paragraphs,
 // tables. Heading levels come from headingLevels unless given.
 export function pdfBlocks(lines, body, levels = headingLevels(lines, body)) {
   const blocks = [];
   let para = '';
+  let paraLines = 0;
   let prev = null;
   let itemX = null;
-  const flush = () => { if (para) blocks.push(para); para = ''; };
+  const flush = () => { if (para) blocks.push(para); para = ''; paraLines = 0; };
+  const pitch = linePitch(lines, body);
+  const spacing = line => Math.abs(line.size - body) <= 0.6 ? pitch : line.size * 1.2;
+  const blocksOf = textBlocks(lines, pitch);
+  // A line ends on purpose when the next line's first word would have fit after it, or, in a block
+  // that isn't prose, unless it runs almost to the edge (a long line that had to wrap).
+  const endsEarly = (a, b) => {
+    const block = blocksOf.get(a);
+    if (a.end == null || !block || /-$/.test(a.text.trim())) return false;
+    const room = block.edge - a.end;
+    const charWidth = (a.end - a.x) / Math.max(a.text.length, 1);
+    const fits = room > (b.text.trim().split(/\s/)[0].length + 1) * charWidth;
+    if (!block.prose && blocksOf.get(b) === block) return fits || room > (block.edge - a.x) * 0.15;
+    return fits;
+  };
+  // Lines centred on one axis but starting at different points, as in an address block.
+  const centred = (a, b) => Math.abs((a.x + a.end) / 2 - (b.x + b.end) / 2) < b.size && Math.abs(a.x - b.x) > b.size / 2 && Math.abs(a.end - b.end) > b.size / 2;
+  // Lines that each start with a short label, as in "Report ID: …" followed by "Warehouse: …".
+  const labelled = l => /^[^\s:][^:]{0,30}:(\s|$)/.test(l.text.trim()) && l.text.trim().split(':')[0].split(' ').length <= 4;
   for (const line of lines) {
     if (line.table) {
       flush();
@@ -325,13 +415,22 @@ export function pdfBlocks(lines, body, levels = headingLevels(lines, body)) {
       prev = itemX = null;
       continue;
     }
-    const t = line.text.replace(/\s+/g, ' ').trim();
+    let t = line.text.replace(/\s+/g, ' ').trim();
     if (!t) continue;
-    const md = tidy(line.md ?? line.text);
+    if (RULE.test(t)) {
+      flush();
+      if (blocks[blocks.length - 1] !== '---') blocks.push('---');
+      prev = itemX = null;
+      continue;
+    }
+    let md = tidy(line.md ?? line.text);
+    t = stripRules(t).replace(LEADER, ' ... ');
+    md = stripRules(md).replace(LEADER, ' ... ');
+    if (!t) continue;
     const ratio = line.size / body;
     const bullet = t.match(/^[•●▪◦‣∙○■□➢►–]\s*/);
     const numbered = t.match(/^(\d{1,3})[.)]\s+/);
-    if (ratio >= 1.15 && t.length < 120) {
+    if (ratio >= 1.15 && t.length < 120 && !t.includes(' ... ')) {
       flush();
       itemX = null;
       const level = levels.get(line.size) ?? 3;
@@ -347,14 +446,25 @@ export function pdfBlocks(lines, body, levels = headingLevels(lines, body)) {
       const rest = dropChars(md, (bullet || numbered)[0].length);
       blocks.push(bullet ? `- ${rest}` : `${numbered[1]}. ${rest}`);
       itemX = line.x;
-    } else if (prev && !prev.heading && !para && itemX != null && line.x > itemX + line.size * 0.5 && prev.y > line.y && prev.y - line.y < line.size * 1.6) {
-      blocks[blocks.length - 1] += ' ' + md; // wrapped list item, indented past its bullet
+    } else if (prev && !prev.heading && !para && itemX != null && prev.y > line.y && prev.y - line.y < spacing(line) * 1.3
+      && (line.x > itemX + line.size * 0.5 || !endsEarly(prev, line))) {
+      // A wrapped list item: indented past its bullet, or carrying on from a line that ran to the edge.
+      const last = blocks[blocks.length - 1];
+      blocks[blocks.length - 1] = /[a-z]-$/.test(plainText(last)) ? unhyphen(last) + md : last + ' ' + md;
     } else {
       // Moving back up the page means a new column; an unfinished sentence carries on there.
       const newColumn = prev && prev.y < line.y && !prev.heading;
-      if (prev && (prev.y - line.y > line.size * 1.8 || (newColumn && /[.!?:;"”)]$/.test(plainText(para))))) flush();
+      const gap = prev ? prev.y - line.y : 0;
+      const breaks = prev && !newColumn && (
+        gap > spacing(line) * 1.3 // a paragraph gap
+        || (!prev.heading && endsEarly(prev, line)) // a line that stops short on purpose
+        || centred(prev, line)
+        || (labelled(prev) && labelled(line))
+        || (paraLines >= 2 && line.x - prev.x > line.size * 0.8 && line.x - prev.x < line.size * 4)); // an indented first line
+      if (breaks || (newColumn && /[.!?:;"”)]$/.test(plainText(para)))) flush();
       itemX = null;
       para = !para ? md : /[a-z]-$/.test(plainText(para)) ? unhyphen(para) + md : para + ' ' + md;
+      paraLines++;
     }
     prev = line;
   }

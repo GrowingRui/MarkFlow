@@ -7,7 +7,9 @@ export async function sheetToMd(file, ctx) {
 }
 
 export async function csvToMd(file) {
-  return workbookToMd(XLSX.read(await file.text(), { type: 'string', raw: true }), false);
+  const { decodeText } = await import('./encoding.js');
+  const text = decodeText(new Uint8Array(await file.arrayBuffer()));
+  return workbookToMd(XLSX.read(text, { type: 'string', raw: true }), false);
 }
 
 // Spreadsheets (not CSV) keep blank rows inside a table, since they often separate groups such as a

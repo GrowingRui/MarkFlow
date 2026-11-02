@@ -1,11 +1,14 @@
 // pdfLines and pdfBlocks without PDF.js: text items are built by hand, so each layout rule is tested on its own.
 import { describe, expect, it } from 'vitest';
-import { dropRunningLines, headingLevels, joinPages, pdfBlocks, pdfLayout, pdfLines, renderEmphasis } from '../src/convert/pdf.js';
+import { dropRunningLines, fontStyle, headingLevels, joinPages, pdfBlocks, pdfLayout, pdfLines, renderEmphasis } from '../src/convert/pdf.js';
 
 // A PDF.js text item. transform = [scaleX, skewY, skewX, scaleY, x, y]; y grows upwards.
 const item = (str, x, y, size = 10, width = str.length * size * 0.5) => ({ str, width, transform: [size, 0, 0, size, x, y] });
 // Lines 14pt apart from the top of the page, unless a position is given.
-const lines = (...rows) => rows.map(([text, opts = {}], i) => ({ text, x: opts.x ?? 72, y: opts.y ?? 700 - i * 14, size: opts.size ?? 10 }));
+const lines = (...rows) => rows.map(([text, opts = {}], i) => {
+  const [x, size] = [opts.x ?? 72, opts.size ?? 10];
+  return { text, x, y: opts.y ?? 700 - i * 14, size, end: x + text.length * size * 0.5 };
+});
 
 describe('pdfLines', () => {
   it('merges items on the same baseline in reading order and inserts spaces at gaps', () => {
@@ -113,7 +116,7 @@ describe('emphasis', () => {
 
   it('marks bold and italic runs, merging words and wrapped lines of one style', () => {
     expect(md(styledPage(
-      [['Dear Ada,', 72, 'r'], ['[GREETING]', 300, 'b']],
+      [['Dear Ada,', 72, 'r'], ['[GREETING]', 130, 'b']],
       [['Please', 72, 'r'], ['note', 110, 'b'], ['that', 135, 'b'], ['this', 160, 'r'], ['wraps', 185, 'i']],
       [['onto a new line.', 72, 'i']],
     ))).toEqual(['Dear Ada, **[GREETING]** Please **note that** this *wraps onto a new line.*']);
@@ -130,6 +133,31 @@ describe('emphasis', () => {
   it('moves spaces outside the markers and drops empty runs', () => {
     const [B, b, I, i] = [0xE000, 0xE001, 0xE002, 0xE003].map(c => String.fromCharCode(c));
     expect(renderEmphasis(`a ${B}bold ${b}b ${I} ${i}c`)).toBe('a **bold** b  c');
+  });
+});
+
+describe('fontStyle', () => {
+  it('reads bold and italic from common font naming schemes', () => {
+    const style = name => Object.entries(fontStyle(name)).filter(([, on]) => on).map(([k]) => k).join('+') || 'plain';
+    expect(['Calibri-BoldItalic', 'NimbusRomNo9L-Medi', 'NimbusRomNo9L-ReguItal', 'HelveticaNeueLTStd-BdIt', 'Arial,Bold', 'CMBX10', 'CMTI10', 'ArialMT', 'NimbusRomNo9L-Regu', 'CMMI10', 'HelveticaWorld-Regular'].map(style))
+      .toEqual(['bold+italic', 'bold', 'italic', 'bold+italic', 'bold', 'bold', 'italic', 'plain', 'plain', 'plain', 'plain']);
+  });
+});
+
+describe('line breaks', () => {
+  it('starts a paragraph at a gap only a little wider than the line spacing', () => {
+    // Lines 11pt apart, paragraphs 16pt apart, as in LaTeX papers.
+    const ys = [700, 689, 678, 662, 651];
+    const out = pdfBlocks(lines(...ys.map((y, i) => [i === 2 || i === 4 ? 'Ends here.' : 'A line of body text that runs on to the next', { y }])), 10);
+    expect(out).toHaveLength(2);
+  });
+  it('keeps lines that each start with a label apart', () => {
+    expect(pdfBlocks(lines(['Report ID: R-12'], ['Warehouse: East'], ['Prepared By: Sam']), 10)).toEqual(['Report ID: R-12', 'Warehouse: East', 'Prepared By: Sam']);
+  });
+  it('turns divider lines into a thematic break and drops sideways text', () => {
+    expect(pdfBlocks(lines(['Total 4'], ['= = = = = = ='], ['Thanks']), 10)).toEqual(['Total 4', '---', 'Thanks']);
+    const rotated = { str: 'STAMP', width: 30, transform: [0, 10, -10, 0, 500, 300] };
+    expect(pdfLines([item('Body text', 72, 700), item('more body text', 72, 686), rotated]).map(l => l.text)).toEqual(['Body text', 'more body text']);
   });
 });
 

@@ -11,26 +11,92 @@ export async function pptxToMd(file, ctx) {
   const paths = Object.keys(zip.files).filter(p => /^ppt\/slides\/slide\d+\.xml$/.test(p)).sort((a, b) => slideNum(a) - slideNum(b));
   const out = [];
   for (const path of paths) {
+    const parts = await relatedParts(zip, path);
+    const charts = new Map();
+    for (const [id, { type, xml }] of parts) if (type === 'chart') charts.set(id, chartToMd(parseXml(xml)));
     // A slide without a title gets no made-up heading, and an empty slide adds nothing.
-    const { title, body } = slideToMd(parseXml(await zip.file(path).async('string')));
-    const blocks = title ? [`## ${title}`, ...body] : body;
+    const { title, body } = slideToMd(parseXml(await zip.file(path).async('string')), charts);
+    const notes = [...parts.values()].find(p => p.type === 'notesSlide');
+    const noteText = notes ? notesText(parseXml(notes.xml)) : '';
+    const blocks = [...(title ? [`## ${title}`] : []), ...body, ...(noteText ? ['### Notes', noteText] : [])];
     if (blocks.length) out.push(joinBlocks(blocks));
   }
   return out.join('\n\n');
 }
 
+// The parts a slide links to (charts, speaker notes), by relationship id: { type, xml }.
+async function relatedParts(zip, slidePath) {
+  const relsPath = slidePath.replace(/slides\/(slide\d+\.xml)$/, 'slides/_rels/$1.rels');
+  const rels = await zip.file(relsPath)?.async('string');
+  const parts = new Map();
+  if (!rels) return parts;
+  for (const rel of parseXml(rels).getElementsByTagName('Relationship')) {
+    const type = rel.getAttribute('Type')?.split('/').pop();
+    if (type !== 'chart' && type !== 'notesSlide') continue;
+    // Targets are relative to the slides folder, such as ../charts/chart1.xml.
+    const target = new URL(rel.getAttribute('Target'), 'file:///ppt/slides/').pathname.slice(1);
+    const xml = await zip.file(target)?.async('string');
+    if (xml) parts.set(rel.getAttribute('Id'), { type, xml });
+  }
+  return parts;
+}
+
+// Speaker notes: the text of the notes page's body placeholder, one paragraph per line.
+function notesText(doc) {
+  const body = [...doc.getElementsByTagName('p:sp')].find(sp => sp.getElementsByTagName('p:ph')[0]?.getAttribute('type') === 'body');
+  return body ? [...body.getElementsByTagName('a:p')].map(textOf).map(t => t.trim()).filter(Boolean).join('\n\n') : '';
+}
+
+// A chart as its title and a table of the data saved with it: a row per category, a column per series.
+export function chartToMd(doc) {
+  const values = el => {
+    const pts = el ? [...el.getElementsByTagName('c:pt')] : [];
+    const out = [];
+    for (const pt of pts) out[+pt.getAttribute('idx')] = pt.getElementsByTagName('c:v')[0]?.textContent ?? '';
+    return out;
+  };
+  const series = [...doc.getElementsByTagName('c:ser')].map(ser => {
+    const part = name => [...ser.children].find(c => c.localName === name);
+    const tx = part('tx');
+    return {
+      // A series name is a cached cell value, or typed-in rich text.
+      name: tx ? values(tx)[0] || textOf(tx) : '',
+      categories: values(part('cat') ?? part('xVal')),
+      values: values(part('val') ?? part('yVal')),
+    };
+  });
+  const titleEl = doc.getElementsByTagName('c:title')[0];
+  const title = titleEl ? textOf(titleEl).trim() : '';
+  const blocks = [title ? `### Chart: ${title}` : '### Chart'];
+  if (series.length) {
+    const count = Math.max(...series.map(s => Math.max(s.categories.length, s.values.length)));
+    const categories = series.find(s => s.categories.length)?.categories ?? [];
+    const rows = [['Category', ...series.map((s, i) => s.name || `Series ${i + 1}`)]];
+    for (let i = 0; i < count; i++) rows.push([categories[i] ?? String(i + 1), ...series.map(s => s.values[i] ?? '')]);
+    blocks.push(mdTable(rows));
+  }
+  return joinBlocks(blocks);
+}
+
 const textOf = el => [...el.getElementsByTagName('a:t')].map(t => t.textContent).join('');
 const child = (el, name) => [...el.children].find(c => c.tagName === name);
 
-// One slide: its title and Markdown blocks, in the order the shapes appear.
-export function slideToMd(doc) {
+// One slide: its title and Markdown blocks, in the order the shapes appear. `charts` holds each
+// chart's Markdown by the relationship id the slide uses for it.
+export function slideToMd(doc, charts = new Map()) {
   const shapes = [];
   const walk = node => {
     for (const el of node.children) {
       if (el.localName === 'grpSp') walk(el);
       else if (el.localName === 'graphicFrame') {
         const rows = [...el.getElementsByTagName('a:tr')].map(tr => [...tr.getElementsByTagName('a:tc')].map(tc => [...tc.getElementsByTagName('a:p')].map(textOf).join(' ')));
-        if (rows.length) shapes.push({ table: mdTable(rows) });
+        const chart = el.getElementsByTagName('c:chart')[0];
+        if (rows.length) shapes.push({ block: mdTable(rows) });
+        else if (chart && charts.has(chart.getAttribute('r:id'))) shapes.push({ block: charts.get(chart.getAttribute('r:id')) });
+      } else if (el.localName === 'pic') {
+        // A picture adds its description (alt text), if it has one.
+        const descr = el.getElementsByTagName('p:cNvPr')[0]?.getAttribute('descr')?.trim();
+        if (descr) shapes.push({ block: `*[Image: ${descr.replace(/\s+/g, ' ')}]*` });
       } else if (el.localName === 'sp') {
         const ph = el.getElementsByTagName('p:ph')[0];
         const type = ph ? ph.getAttribute('type') || 'body' : null;
@@ -49,7 +115,7 @@ export function slideToMd(doc) {
   const body = [];
   for (const s of shapes) {
     if (s === titleShape) continue;
-    if (s.table) body.push(s.table);
+    if (s.block) body.push(s.block);
     // Subtitles and other title placeholders are plain text; body placeholders are bulleted by default.
     else body.push(...listBlocks(s.paras, s.type && !TITLE_TYPES.includes(s.type) && s.type !== 'subTitle'));
   }

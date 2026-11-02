@@ -1,5 +1,5 @@
 // Formats that become code blocks, in whole or in part.
-import { fence } from './markdown.js';
+import { fence, parseXml } from './markdown.js';
 
 export async function jsonToMd(file) {
   const text = await file.text();
@@ -7,8 +7,15 @@ export async function jsonToMd(file) {
   catch { return fence('json', text); }
 }
 
+// News feeds become readable posts; any other XML is shown as code.
 export async function xmlToMd(file) {
-  return fence('xml', (await file.text()).trim());
+  const text = (await file.text()).trim();
+  const doc = parseXml(text);
+  if (!doc.querySelector('parsererror')) {
+    const { isFeed, feedToMd } = await import('./feed.js');
+    if (isFeed(doc)) return feedToMd(doc);
+  }
+  return fence('xml', text);
 }
 
 export async function ipynbToMd(file) {

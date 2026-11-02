@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<rss version="2.0"><channel><title>Harbour News</title><description>Updates from the harbour office</description>
+<item><title>New mooring fees</title><link>https://example.com/fees</link><pubDate>Mon, 05 Jan 2026 09:00:00 +0000</pubDate>
+<description>&lt;p&gt;Fees rise by &lt;strong&gt;4%&lt;/strong&gt; from March.&lt;/p&gt;</description></item>
+<item><title>Dredging finished</title><description>The east channel is open again.</description></item>
+</channel></rss>
