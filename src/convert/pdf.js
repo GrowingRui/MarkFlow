@@ -1,7 +1,8 @@
 import * as pdfjs from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { loadModule } from './errors.js';
-import { bodySize, dropRunningLines, headingLevels, joinPages, pdfBlocks, pdfLayout, pdfLines, renderEmphasis, unbold } from './layout.js';
+import { dropFigureText, markRules, pageGraphics } from './graphics.js';
+import { bodySize, dropRunningLines, headingLevels, joinPages, makeLine, pdfBlocks, pdfLayout, pdfLines, renderEmphasis, unbold } from './layout.js';
 import { joinBlocks } from './markdown.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -33,13 +34,21 @@ export async function pdfToMd(file, ctx) {
       const scanned = ocrItems(blocks, { scale, bottom, height: canvas.height });
       pages.push(scanned.length ? { lines: pdfLines(scanned), bottom, top, scanned: true } : { ocrText: ocrTextToMd(text) });
     } else {
-      const styles = await fontStyles(page, items);
+      // The page's drawing operations give its fonts' names (for bold and italic) and its graphics:
+      // rules that mark out tables, and figures whose labels are left out.
+      const opList = await page.getOperatorList().catch(() => null);
+      const styles = opList ? await fontStyles(page, items) : {};
       for (const it of items) {
         textChars += it.str.length;
         if (styles[it.fontName]?.bold) boldChars += it.str.length;
       }
       const [, bottom, , top] = page.view;
-      pages.push({ lines: pdfLines(items, styles), bottom, top });
+      let lines = pdfLines(items, styles);
+      if (opList) {
+        const graphics = pageGraphics(opList, pdfjs.OPS, page.view);
+        lines = markRules(dropFigureText(lines, graphics.figures, makeLine), graphics);
+      }
+      pages.push({ lines, bottom, top });
     }
     page.cleanup();
   }
@@ -64,14 +73,9 @@ export async function pdfToMd(file, ctx) {
 }
 
 // Bold and italic come from the font's name, such as "ABCDEF+Calibri-BoldItalic". PDF.js reports
-// names only for fonts it has loaded to draw the page, so the page's drawing operations are read
-// first. A font that never arrives counts as plain, and so does every font when the page can't be read.
+// names only for fonts it has loaded to draw the page, so this runs after the page's drawing operations
+// are read. A font that never arrives counts as plain.
 async function fontStyles(page, items) {
-  try {
-    await page.getOperatorList();
-  } catch {
-    return {};
-  }
   const styles = {};
   for (const id of new Set(items.map(it => it.fontName))) {
     const font = await Promise.race([new Promise(done => page.commonObjs.get(id, done)), new Promise(done => setTimeout(done, 1000))]);

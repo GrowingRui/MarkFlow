@@ -310,6 +310,33 @@ const cols = [50, 70, 100, 140, 180, 260, 300, 350];
 fText('All showtimes are approximate and subject to change.', 50, 470);
 write('form.pdf', await form.save({ useObjectStreams: false }));
 
+// PDF graphics: a chart (axes, a plotted line, tick labels and a legend) with a caption under it, then a
+// table without rules, a coloured bar with a heading in it, and a table ruled under its header
+const drawn = await PDFDocument.create();
+drawn.setCreationDate(date);
+drawn.setModificationDate(date);
+const dRegular = await drawn.embedFont(StandardFonts.Helvetica);
+const dBold = await drawn.embedFont(StandardFonts.HelveticaBold);
+const dPage = drawn.addPage([612, 792]);
+const dText = (str, x, y, size = 10, font = dRegular, color = ink) => dPage.drawText(str, { x, y, size, font, color });
+dText('Monthly visitors rose through the spring and fell back in the summer holidays.', 72, 720);
+dPage.drawLine({ start: { x: 100, y: 560 }, end: { x: 100, y: 690 }, thickness: 0.8, color: ink });
+dPage.drawLine({ start: { x: 100, y: 560 }, end: { x: 400, y: 560 }, thickness: 0.8, color: ink });
+dPage.drawSvgPath('M 0 0 L 60 -40 L 120 -70 L 180 -90 L 240 -50 L 300 -20', { x: 100, y: 580, borderColor: rgb(0.2, 0.4, 0.8), borderWidth: 1.5 });
+[[0, 0], [60, 40], [120, 70], [180, 90], [240, 50], [300, 20]].forEach(([x, y]) => dPage.drawCircle({ x: 100 + x, y: 580 + y, size: 2.5, color: rgb(0.2, 0.4, 0.8) }));
+[['0', 560], ['50', 620], ['100', 680]].forEach(([t, y]) => dText(t, 96 - dRegular.widthOfTextAtSize(t, 7), y - 3, 7));
+[['Jan', 100], ['Mar', 220], ['May', 340]].forEach(([t, x]) => dText(t, x - 6, 548, 7));
+dText('Visitors', 340, 678, 7);
+dText('Figure 1. Visitors per month, in thousands.', 72, 525, 9);
+const items3 = [['Item', 'Qty', 'Price'], ['Tickets', '3', '45.00'], ['Guide', '1', '12.00'], ['Parking', '1', '6.00']];
+items3.forEach((row, i) => row.forEach((cell, j) => dText(cell, [72, 300, 400][j], 480 - i * 16)));
+dPage.drawRectangle({ x: 70, y: 397, width: 400, height: 16, color: rgb(0.1, 0.1, 0.1) });
+dText('Totals', 250, 401, 10, dBold, rgb(1, 1, 1));
+[['Subtotal', '', '63.00'], ['Tax', '10%', '6.30'], ['Total', '', '69.30']]
+  .forEach((row, i) => row.forEach((cell, j) => cell && dText(cell, [72, 300, 400][j], 378 - i * 16)));
+dPage.drawLine({ start: { x: 70, y: 373 }, end: { x: 470, y: 373 }, thickness: 0.8, color: ink });
+write('drawn.pdf', await drawn.save({ useObjectStreams: false }));
+
 // CSV saved by a Chinese version of Excel, in GBK rather than UTF-8:
 // 姓名,城市 / 张伟,北京 / 李娜,上海
 write('chinese-gbk.csv', Buffer.from('d0d5c3fb2cb3c7cad00ad5c5ceb02cb1b1bea90ac0eec4c82cc9cfbaa30a', 'hex'));

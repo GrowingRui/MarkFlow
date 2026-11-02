@@ -120,9 +120,10 @@ export function pdfLines(items, styles = {}) {
       }
       const gap = seg ? it.x - seg.end : 0;
       const md = styled(it.str, styles[it.fontName]);
-      // A lone bullet or number stays with its text however far apart they are.
+      // A lone bullet or number stays with its text however far apart they are, but not with another
+      // lone mark (a table's empty cells shown as "-").
       // Words read from a scan can sit further apart than a PDF's, so their cells need a wider gap.
-      if (seg && (gap < row.size * (it.word ? 1.6 : 1) || MARKER.test(seg.text.trim()))) {
+      if (seg && (gap < row.size * (it.word ? 1.6 : 1) || (MARKER.test(seg.text.trim()) && !MARKER.test(it.str.trim())))) {
         if ((it.word || gap > it.size * 0.15) && !/\s$/.test(seg.text) && !/^\s/.test(it.str)) { seg.text += ' '; seg.md += ' '; }
         seg.text += it.str;
         seg.md += md;
@@ -141,10 +142,17 @@ export function pdfLines(items, styles = {}) {
 const BULLET = /^(?:[•●▪◦‣∙○■□➢►–\uf0a7\uf0b7\uf076\uf0d8\uf0fc]|[-o](?=\s))\s*/;
 const MARKER = /^([•●▪◦‣∙○■□➢►–-]|\d{1,3}[.)])$/;
 // A line's size is that of its own segments, so a column's line isn't sized by text beside it.
-const makeLine = (segs, { y, size }) => ({
+// It keeps any rule marked above its segments (see markRules in graphics.js).
+export const makeLine = (segs, { y, size }) => ({
   text: segs.map(s => s.text.trim()).join(' '), md: segs.map(s => s.md.trim()).join(' '), x: segs[0].x, y,
   size: Math.max(...segs.map(s => s.size ?? 0)) || size, end: segs[segs.length - 1].end, segs,
+  ...(segs.some(s => s.ruleAbove) && { ruleAbove: true }),
 });
+
+// A table without rules between its rows ends where a rule starts a ruled section (a table's top
+// border, or a bar behind a heading), unless the row after the rule lines up with the table, as rows
+// after a rule between groups do. A table ruled between its rows carries on across them.
+const ruledOff = (rows, next) => next.ruleAbove && rows.length >= 2 && !rows.slice(1).some(r => r.ruleAbove) && !linesUp(next, rows);
 
 // Puts lines in reading order: multi-column text is read column by column, and rows of short cells
 // lined up under shared gaps become { table } entries. Tables of three or more columns are found
@@ -157,10 +165,9 @@ export function pdfLayout(lines, depth = 0) {
   for (let i = 0; i < lines.length; i++) {
     const end = wideTableEnd(lines, i);
     if (end > i) {
-      // Rows just above that line up with the table belong to it too, such as a first row with
-      // only two cells filled in.
-      // A header row, often centred over its columns and wrapping onto a second line, is pulled in
-      // as long as its cells overlap the table's columns.
+      // Rows just above that line up with the table belong to it too: a first row with only two cells
+      // filled in, or a header, often centred over its columns and wrapping onto a second line, as
+      // long as its cells overlap the table's columns.
       const rows = lines.slice(i, end + 1);
       let above = rest.length;
       while (above > 0 && rest[above - 1].y - (above < rest.length ? rest[above] : rows[0]).y < rows[0].size * 3) {
@@ -182,13 +189,18 @@ export function pdfLayout(lines, depth = 0) {
 // hyphenated break, which is how three narrow columns of prose differ from a table.
 const cellRow = l => l.segs.length >= 2 && shortCells(l.segs) && l.segs.every(s => s.text.trim().length <= 35 && !/[a-z]-$/.test(s.text.trim()));
 // At least two of the line's cells start or end where cells of the table's rows do (or, for a header,
-// overlap them).
-const linesUp = (line, rows, overlap = false) => line.segs.filter(s => rows.some(r => r.segs.some(t =>
-  Math.abs(t.x - s.x) < line.size || Math.abs(t.end - s.end) < line.size || (overlap && s.x < t.end && s.end > t.x)))).length >= 2;
+// overlap them). Once a table has a few rows, a label and one value lining up will do, since labels
+// under a group ("Paint Supplies" under "Supplies") are often indented.
+const linesUp = (line, rows, overlap = false) => {
+  const fits = s => rows.some(r => r.segs.some(t =>
+    Math.abs(t.x - s.x) < line.size || Math.abs(t.end - s.end) < line.size || (overlap && s.x < t.end && s.end > t.x)));
+  return line.segs.filter(fits).length >= 2 || (rows.length >= 3 && line.segs.length === 2 && fits(line.segs[1]));
+};
 
 // The last line of a table of three or more columns starting at lines[i] (i itself when none does):
-// further rows lining up with the table's columns, and lines of a cell that wraps (text starting past
-// the first column). It needs at least three rows.
+// further rows lining up with the table's columns, a short label alone in the first column, in the
+// table's type size, with rows after it (a group such as "Supplies"; a larger heading starts something new), and lines of a cell that wraps (text starting past the first
+// column). It needs at least three rows.
 function wideTableEnd(lines, i) {
   const head = lines[i];
   if (head.segs.length < 3 || !cellRow(head)) return i;
@@ -196,8 +208,10 @@ function wideTableEnd(lines, i) {
   let j = i;
   while (j + 1 < lines.length) {
     const next = lines[j + 1];
-    if (lines[j].y - next.y > Math.max(lines[j].size, next.size) * 3 || lines[j].y < next.y) break;
+    if (lines[j].y - next.y > Math.max(lines[j].size, next.size) * 3 || lines[j].y < next.y || ruledOff(rows, next)) break;
     if (cellRow(next) && linesUp(next, rows)) rows.push(next);
+    else if (next.segs.length === 1 && next.text.length <= 30 && Math.abs(next.x - head.x) < next.size * 2 && Math.abs(next.size - head.size) < 0.5
+      && lines[j + 2] && cellRow(lines[j + 2]) && linesUp(lines[j + 2], rows)) rows.push(next);
     else if (!(next.x > head.segs[0].end && next.segs.length <= 2 && next.segs.every(s => s.text.trim().length <= 60))) break;
     j++;
   }
@@ -287,7 +301,7 @@ function tableEnd(run, i) {
   if (run[i].segs.length < 2 || !shortCells(run[i].segs)) return i;
   const firstCol = run[i].segs[0].end;
   let j = i, rows = 1;
-  while (j + 1 < run.length && shortCells(run[j + 1].segs) && (run[j + 1].segs.length >= 2 || run[j + 1].x > firstCol)) {
+  while (j + 1 < run.length && shortCells(run[j + 1].segs) && (run[j + 1].segs.length >= 2 || run[j + 1].x > firstCol) && !ruledOff(run.slice(i, j + 1), run[j + 1])) {
     if (run[++j].segs.length >= 2) rows++;
   }
   // One row with cells and lines under it is a line beside a note, such as a title and a date.
@@ -303,6 +317,9 @@ function columns(piece, gutter, depth) {
   }
   return left.length < 2 || right.length < 2 ? piece : [...pdfLayout(left, depth + 1), ...pdfLayout(right, depth + 1)];
 }
+
+// A cell holding a number or amount, such as 2,100, $45.00, -23 or 10.20%.
+const NUMBER = /^[-+(]?[$€£¥]?\d[\d.,]*%?\)?$/;
 
 // A table built from lines, keeping their usual size and amount of text, which count towards the
 // document's body text size like any other text.
@@ -330,7 +347,10 @@ function tableRows(run, em) {
       cells[i] = (cells[i] + ' ' + s.md.trim()).trim();
     }
     const prev = rows[rows.length - 1];
-    if (prev && !cells[0]) cells.forEach((c, i) => { if (c) prev[i] = (prev[i] + ' ' + c).trim(); });
+    // A row with an empty first cell carries on the row above (text wrapped in a cell), unless that row
+    // is a group label on its own, or this one puts a number where the row above already has one.
+    const continues = prev && !cells[0] && prev.slice(1).some(Boolean) && !cells.some((c, i) => c && prev[i] && NUMBER.test(plainText(c)));
+    if (continues) cells.forEach((c, i) => { if (c) prev[i] = (prev[i] + ' ' + c).trim(); });
     else rows.push(cells);
   }
   // A Markdown header row already stands out, so bold there is dropped.
