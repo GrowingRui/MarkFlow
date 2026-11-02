@@ -1,6 +1,7 @@
 // pdfLines and pdfBlocks without PDF.js: text items are built by hand, so each layout rule is tested on its own.
 import { describe, expect, it } from 'vitest';
-import { dropRunningLines, fontStyle, headingLevels, joinPages, pdfBlocks, pdfLayout, pdfLines, renderEmphasis } from '../src/convert/pdf.js';
+import { dropRunningLines, headingLevels, joinPages, pdfBlocks, pdfLayout, pdfLines, renderEmphasis } from '../src/convert/layout.js';
+import { fontStyle } from '../src/convert/pdf.js';
 
 // A PDF.js text item. transform = [scaleX, skewY, skewX, scaleY, x, y]; y grows upwards.
 const item = (str, x, y, size = 10, width = str.length * size * 0.5) => ({ str, width, transform: [size, 0, 0, size, x, y] });

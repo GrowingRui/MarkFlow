@@ -1,12 +1,14 @@
 // Text recognition for images and scanned PDF pages. The engine and English language data are
 // served from this site (see vite.config.js), so nothing is fetched from a CDN.
 import { createWorker, OEM, PSM } from 'tesseract.js';
+import { bodySize, pdfBlocks, pdfLayout, pdfLines, renderEmphasis } from './layout.js';
 import { joinBlocks } from './markdown.js';
 
 const asset = path => new URL(import.meta.env.BASE_URL + path, location.href).href;
 
 let worker;
-export async function ocr(image, ctx) {
+// Tesseract's reading of an image or canvas: { blocks, text }.
+export async function recognize(image, ctx) {
   if (!worker) {
     ctx.progress('Loading text recognition. This takes a moment the first time…');
     worker = await createWorker('eng', OEM.LSTM_ONLY, {
@@ -19,47 +21,55 @@ export async function ocr(image, ctx) {
     await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
   }
   const { data } = await worker.recognize(image, {}, { text: true, blocks: true });
-  return data.blocks?.length ? ocrBlocksToMd(data.blocks) : ocrTextToMd(data.text);
+  return { blocks: data.blocks ?? [], text: data.text ?? '' };
 }
 
-// Tesseract's blocks → paragraphs → lines, as Markdown. Tesseract often runs paragraphs together, so a
-// paragraph is also split where a gap opens between lines, or after a line that ends a sentence well
-// short of the paragraph's right edge; and it sometimes breaks one mid-sentence, so those are rejoined.
-// Lines starting with a bullet or a number become list items.
-export function ocrBlocksToMd(blocks) {
-  const out = [];
-  for (const block of blocks) {
-    let para = null;
-    for (const p of block.paragraphs) {
-      const lines = p.lines.map(l => ({ text: l.text.trim(), ...l.bbox })).filter(l => l.text);
-      if (!lines.length) continue;
-      const height = median(lines.map(l => l.y1 - l.y0));
-      const right = Math.max(...lines.map(l => l.x1));
-      const width = right - Math.min(...lines.map(l => l.x0));
-      lines.forEach((line, i) => {
-        const prev = lines[i - 1];
-        const item = line.text.match(LIST_ITEM);
-        // A line starting in lowercase after an unfinished sentence carries on, whatever the layout says.
-        const carriesOn = para && !item && /^[a-z]/.test(line.text) && !/[.!?:"”]$/.test(para);
-        const brk = !carriesOn && (!para || item || !prev
-          || line.y0 - prev.y1 > height * 0.75
-          || (/[.!?:"”]$/.test(prev.text) && right - prev.x1 > width * 0.2));
-        if (brk) {
-          if (para) out.push(para);
-          para = item ? (item[1] ? '- ' : `${item[2]}. `) + item[3] : line.text;
-        } else {
-          para = /[a-z]-$/.test(para) && /^[a-z]/.test(line.text) ? para.slice(0, -1) + line.text : para + ' ' + line.text;
-        }
-      });
-    }
-    if (para) out.push(para);
-  }
-  return joinBlocks(out);
-}
-
-// Tesseract often reads a round bullet as «, ° or ©.
-const LIST_ITEM = /^(?:([•·●▪◦*«°©-])|(\d{1,3})[.)])\s+(.*)/;
+// Tesseract often reads a round bullet as «, °, © or similar.
+const BULLET = /^[«°©*+=•·●▪◦]{1,2}$/;
 const median = xs => [...xs].sort((a, b) => a - b)[xs.length >> 1];
+
+/**
+ * Tesseract's words as positioned text items like a PDF page's, so the same layout code finds the
+ * scan's columns, tables, lists and paragraphs. Pixel positions are divided by `scale` to give points,
+ * with y measured up from the bottom of an image `height` pixels tall (by default, down to the lowest
+ * word), offset by `bottom`, the page's own bottom edge.
+ *
+ * Tesseract's size estimates vary by a fifth or more between lines of the same text, which would read
+ * as headings, so sizes up to 40% above the usual one count as body text, and larger ones within 15% of each
+ * other share the largest of them.
+ */
+export function ocrItems(blocks, { scale = 1, bottom = 0, height } = {}) {
+  const lines = blocks.flatMap(b => b.paragraphs ?? []).flatMap(p => p.lines ?? [])
+    .filter(l => l.text?.trim() && l.words?.some(w => w.text?.trim()));
+  if (!lines.length) return [];
+  const sizeOf = l => median(l.words.map(w => w.font_size).filter(s => s > 0)) || l.bbox.y1 - l.bbox.y0;
+  const sizes = lines.map(sizeOf);
+  // The usual size, weighted by how much text has it.
+  const body = median(lines.flatMap((l, i) => Array(Math.max(1, l.text.trim().length)).fill(sizes[i])));
+  const large = [...new Set(sizes.filter(s => s >= body * 1.4))].sort((a, b) => b - a);
+  const group = new Map();
+  let top = Infinity;
+  for (const s of large) {
+    if (s < top * 0.85) top = s;
+    group.set(s, top);
+  }
+  height ??= Math.max(...lines.map(l => l.bbox.y1));
+  const items = [];
+  lines.forEach((line, i) => {
+    const size = (group.get(sizes[i]) ?? body) / scale;
+    const base = line.baseline;
+    const words = line.words.filter(w => w.text?.trim());
+    words.forEach((w, j) => {
+      // The word sits on its line's baseline, which may slope slightly across a scanned page.
+      const y = base?.has_baseline
+        ? base.y0 + (base.y1 - base.y0) * ((w.bbox.x0 - base.x0) / Math.max(1, base.x1 - base.x0))
+        : w.bbox.y1;
+      const str = j === 0 && words.length > 1 && BULLET.test(w.text.trim()) ? '•' : w.text.trim();
+      items.push({ str, word: true, width: (w.bbox.x1 - w.bbox.x0) / scale, transform: [size, 0, 0, size, w.bbox.x0 / scale, (height - y) / scale + bottom] });
+    });
+  });
+  return items;
+}
 
 // Plain Tesseract text, when no layout came back: lines are rejoined into paragraphs at blank lines.
 export function ocrTextToMd(text) {
@@ -68,5 +78,9 @@ export function ocrTextToMd(text) {
 
 export async function imageToMd(file, ctx) {
   ctx.progress('Recognizing text…');
-  return ocr(file, ctx);
+  const { blocks, text } = await recognize(file, ctx);
+  const items = ocrItems(blocks);
+  if (!items.length) return ocrTextToMd(text);
+  const lines = pdfLayout(pdfLines(items));
+  return joinBlocks(pdfBlocks(lines, bodySize(lines)).map(renderEmphasis));
 }
