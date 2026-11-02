@@ -192,6 +192,32 @@ pageText.forEach((lines, n) => {
 });
 write('chapter.pdf', await chapter.save({ useObjectStreams: false }));
 
+// PDF emphasis: a title only a little larger than the body, bold labels after text on the same line,
+// a bold phrase of separate words that wraps onto a second line, and an italic note
+const letter = await PDFDocument.create();
+letter.setCreationDate(date);
+letter.setModificationDate(date);
+const eRegular = await letter.embedFont(StandardFonts.Helvetica);
+const eBold = await letter.embedFont(StandardFonts.HelveticaBold);
+const eItalic = await letter.embedFont(StandardFonts.HelveticaOblique);
+const ePage = letter.addPage([595, 842]);
+const put = (str, x, y, font = eRegular, size = 12) => ePage.drawText(str, { x, y, size, font, color: ink });
+put('Sample cover letter', 230, 760, eBold, 14);
+put('Subject: Application for the [Role] position', 85, 710);
+put('[SUBJECT]', 420, 710, eBold);
+put('Dear [Name],', 85, 662);
+put('[GREETING]', 420, 662, eBold);
+put('I am writing to apply for the [Role] position at [Company], as advertised on your', 85, 614);
+put('website. My experience matches the requirements in the description.', 85, 598);
+put('[INTRODUCTION AND MOTIVATION]', 220, 574, eBold);
+['[EVERYTHING', 'ABOUT', 'YOU:', 'SKILLS', 'AND'].reduce((x, word) => (put(word, x, 526, eBold), x + eBold.widthOfTextAtSize(word + ' ', 12)), 85);
+put('ACHIEVEMENTS]', 85, 510, eBold);
+put('Best regards,', 85, 462);
+put('[SIGNING OFF]', 400, 438, eBold);
+put('[Your name]', 85, 414);
+put('Attach your CV as a PDF.', 85, 366, eItalic);
+write('letter.pdf', await letter.save({ useObjectStreams: false }));
+
 // EPUB
 const epub = new JSZip();
 epub.file('mimetype', 'application/epub+zip', { date, createFolders: false });

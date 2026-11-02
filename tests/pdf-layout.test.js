@@ -1,6 +1,6 @@
 // pdfLines and pdfBlocks without PDF.js: text items are built by hand, so each layout rule is tested on its own.
 import { describe, expect, it } from 'vitest';
-import { dropRunningLines, joinPages, pdfBlocks, pdfLayout, pdfLines } from '../src/convert/pdf.js';
+import { dropRunningLines, headingLevels, joinPages, pdfBlocks, pdfLayout, pdfLines, renderEmphasis } from '../src/convert/pdf.js';
 
 // A PDF.js text item. transform = [scaleX, skewY, skewX, scaleY, x, y]; y grows upwards.
 const item = (str, x, y, size = 10, width = str.length * size * 0.5) => ({ str, width, transform: [size, 0, 0, size, x, y] });
@@ -102,6 +102,44 @@ describe('pdfBlocks with layout', () => {
   it('writes tables as Markdown between paragraphs', () => {
     expect(pdfBlocks([...lines(['Before.']), { table: [['A', 'B'], ['1', '2']] }, ...lines(['After.', { y: 600 }])], 10))
       .toEqual(['Before.', '| A | B |\n| --- | --- |\n| 1 | 2 |', 'After.']);
+  });
+});
+
+describe('emphasis', () => {
+  // Items in fonts 'r' (regular), 'b' (bold) and 'i' (italic); each row is a list of [text, x, font].
+  const styles = { r: {}, b: { bold: true }, i: { italic: true } };
+  const styledPage = (...rows) => pdfLines(rows.flatMap((pieces, i) => pieces.map(([str, x, font]) => ({ ...item(str, x, 700 - i * 14), fontName: font }))), styles);
+  const md = lines => pdfBlocks(lines, 10).map(renderEmphasis);
+
+  it('marks bold and italic runs, merging words and wrapped lines of one style', () => {
+    expect(md(styledPage(
+      [['Dear Ada,', 72, 'r'], ['[GREETING]', 300, 'b']],
+      [['Please', 72, 'r'], ['note', 110, 'b'], ['that', 135, 'b'], ['this', 160, 'r'], ['wraps', 185, 'i']],
+      [['onto a new line.', 72, 'i']],
+    ))).toEqual(['Dear Ada, **[GREETING]** Please **note that** this *wraps onto a new line.*']);
+  });
+  it('keeps emphasis in list items and leaves headings and table headers plain', () => {
+    expect(md(styledPage([['•', 72, 'r'], ['Bold', 84, 'b'], ['item', 110, 'r']]))).toEqual(['- **Bold** item']);
+    expect(md(pdfLines([{ ...item('Big title', 72, 700, 16), fontName: 'b' }], styles))).toEqual(['# Big title']);
+    const table = pdfLayout(styledPage(
+      [['Paragraph text that runs right across the page above the table.', 72, 'r']],
+      [['Site', 72, 'b'], ['Status', 300, 'b']], [['North', 72, 'r'], ['Done', 300, 'b']], [['South', 72, 'r'], ['Open', 300, 'r']],
+    ));
+    expect(md(table)[1]).toBe(['| Site | Status |', '| --- | --- |', '| North | **Done** |', '| South | Open |'].join('\n'));
+  });
+  it('moves spaces outside the markers and drops empty runs', () => {
+    const [B, b, I, i] = [0xE000, 0xE001, 0xE002, 0xE003].map(c => String.fromCharCode(c));
+    expect(renderEmphasis(`a ${B}bold ${b}b ${I} ${i}c`)).toBe('a **bold** b  c');
+  });
+});
+
+describe('headingLevels', () => {
+  it('ranks heading sizes, so a lone heading only a little larger than body text is a title', () => {
+    expect(pdfBlocks(lines(['Cover letter', { size: 14 }], ['Body text.', { size: 12 }]), 12)).toEqual(['# Cover letter', 'Body text.']);
+  });
+  it('gives sizes within 5% of each other the same level', () => {
+    const levels = headingLevels(lines(['A', { size: 24 }], ['B', { size: 23.5 }], ['C', { size: 15 }], ['D', { size: 13 }], ['Body']), 10);
+    expect([24, 23.5, 15, 13].map(s => levels.get(s))).toEqual([1, 1, 2, 3]);
   });
 });
 
